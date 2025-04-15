@@ -1,0 +1,17 @@
+{
+  "name": "hexagon-game",
+  "version": "1.0.0",
+  "description": "A hexagon-based game with TypeScript",
+  "main": "dist/game.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "serve": "http-server -c-1",
+    "start": "tsc-watch --onsuccess \"node dist/index.js\""  
+  },
+  
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "http-server": "^14.1.1"
+  }
+} 
