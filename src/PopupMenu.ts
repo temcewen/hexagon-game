@@ -9,10 +9,24 @@ export interface PopupMenuItem {
 export class PopupMenu {
     private static instance: PopupMenu | null = null;
     private element: HTMLDivElement;
+    private modalOverlay: HTMLDivElement;
     private items: PopupMenuItem[] = [];
     private isVisible: boolean = false;
+    private forceKeepOpen: boolean = false;
 
     private constructor() {
+        // Create modal overlay
+        this.modalOverlay = document.createElement('div');
+        this.modalOverlay.style.position = 'fixed';
+        this.modalOverlay.style.top = '0';
+        this.modalOverlay.style.left = '0';
+        this.modalOverlay.style.width = '100%';
+        this.modalOverlay.style.height = '100%';
+        this.modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+        this.modalOverlay.style.display = 'none';
+        this.modalOverlay.style.zIndex = '999';
+        document.body.appendChild(this.modalOverlay);
+
         this.element = document.createElement('div');
         this.element.style.position = 'fixed';
         this.element.style.backgroundColor = 'white';
@@ -25,9 +39,9 @@ export class PopupMenu {
         
         document.body.appendChild(this.element);
         
-        // Close menu when clicking outside
+        // Close menu when clicking outside, unless forceKeepOpen is true
         document.addEventListener('mousedown', (e) => {
-            if (this.isVisible && !this.element.contains(e.target as Node)) {
+            if (this.isVisible && !this.element.contains(e.target as Node) && !this.forceKeepOpen) {
                 this.hide();
             }
         });
@@ -40,9 +54,17 @@ export class PopupMenu {
         return PopupMenu.instance;
     }
 
-    public show(position: Point, items: PopupMenuItem[]): void {
+    public show(position: Point, items: PopupMenuItem[], options: { modal?: boolean, forceKeepOpen?: boolean } = {}): void {
         this.items = items;
         this.element.innerHTML = '';
+        this.forceKeepOpen = options.forceKeepOpen || false;
+        
+        // Show/hide modal overlay
+        if (options.modal) {
+            this.modalOverlay.style.display = 'block';
+        } else {
+            this.modalOverlay.style.display = 'none';
+        }
         
         // Create menu items
         items.forEach((item, index) => {
@@ -79,7 +101,9 @@ export class PopupMenu {
             // Add click handler
             menuItem.addEventListener('click', () => {
                 item.callback();
-                this.hide();
+                if (!this.forceKeepOpen) {
+                    this.hide();
+                }
             });
             
             this.element.appendChild(menuItem);
@@ -108,7 +132,9 @@ export class PopupMenu {
 
     public hide(): void {
         this.element.style.display = 'none';
+        this.modalOverlay.style.display = 'none';
         this.isVisible = false;
+        this.forceKeepOpen = false;
     }
 
     public isMenuVisible(): boolean {

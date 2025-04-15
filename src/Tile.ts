@@ -23,6 +23,11 @@ export abstract class Tile {
     protected hexSize: number;
     protected ctx: CanvasRenderingContext2D;
 
+    // Optional method for handling drop events
+    public onDropped?(fromPosition: { q: number, r: number, s: number }): void {
+        console.log("Tile dropped into a new position.");
+    }
+
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
         this.ctx = ctx;
         this.hexSize = hexSize;

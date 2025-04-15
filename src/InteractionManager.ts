@@ -153,8 +153,25 @@ export class InteractionManager {
                     tile.s === closestHexagon!.s
                 );
 
+                // Store original position before moving
+                const fromPosition = {
+                    q: this.selectedTile.q,
+                    r: this.selectedTile.r,
+                    s: this.selectedTile.s
+                };
+
                 // Move tile to new position
                 this.selectedTile.moveTo(closestHexagon);
+ 
+                // Check if the position actually changed
+                if (fromPosition.q !== closestHexagon.q ||
+                    fromPosition.r !== closestHexagon.r ||
+                    fromPosition.s !== closestHexagon.s) {
+                    // Call onDropped only if the position changed
+                    if (this.selectedTile.onDropped) {
+                        this.selectedTile.onDropped(fromPosition);
+                    }
+                }
 
                 // Restore original z-index before recalculating new z-index
                 if (this.selectedTile.originalZIndex !== undefined) {

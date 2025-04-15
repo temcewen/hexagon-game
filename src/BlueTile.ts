@@ -35,20 +35,44 @@ export class BlueTile extends Tile {
         const screenX = rect.left + mousePos.x * scaleX;
         const screenY = rect.top + mousePos.y * scaleY;
 
-        // Define menu items with callbacks
+        // Define the rotation submenu
+        const showRotationMenu = (position: { x: number, y: number }) => {
+            const rotationMenuItems: PopupMenuItem[] = [
+                {
+                    text: "↻",
+                    callback: () => {
+                        this.rotationDegrees = (this.rotationDegrees + 60) % 360;
+                        this.ctx.canvas.dispatchEvent(new Event('redraw'));
+                        // Show the menu again at the same position
+                        this.popupMenu.show(position, rotationMenuItems, { modal: true, forceKeepOpen: true });
+                    }
+                },
+                {
+                    text: "↺",
+                    callback: () => {
+                        this.rotationDegrees = (this.rotationDegrees - 60 + 360) % 360;
+                        this.ctx.canvas.dispatchEvent(new Event('redraw'));
+                        // Show the menu again at the same position
+                        this.popupMenu.show(position, rotationMenuItems, { modal: true, forceKeepOpen: true });
+                    }
+                },
+                {
+                    text: "Done",
+                    callback: () => {
+                        // Explicitly hide the menu and modal overlay
+                        this.popupMenu.hide();
+                    }
+                }
+            ];
+            this.popupMenu.show(position, rotationMenuItems, { modal: true, forceKeepOpen: true });
+        };
+
+        // Define main menu items
         const menuItems: PopupMenuItem[] = [
             {
-                text: "Rotate Clockwise",
+                text: "Rotate",
                 callback: () => {
-                    this.rotationDegrees = (this.rotationDegrees + 60) % 360;
-                    this.ctx.canvas.dispatchEvent(new Event('redraw'));
-                }
-            },
-            {
-                text: "Rotate Counter-clockwise",
-                callback: () => {
-                    this.rotationDegrees = (this.rotationDegrees - 60 + 360) % 360;
-                    this.ctx.canvas.dispatchEvent(new Event('redraw'));
+                    showRotationMenu({ x: screenX, y: screenY });
                 }
             },
             {
@@ -59,7 +83,7 @@ export class BlueTile extends Tile {
             }
         ];
 
-        // Show popup menu at screen coordinates
+        // Show initial popup menu at screen coordinates
         this.popupMenu.show({ x: screenX, y: screenY }, menuItems);
     }
 
