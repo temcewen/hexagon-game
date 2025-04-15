@@ -1,7 +1,9 @@
 import BlackGrid from './blackGrid.js';
-import { RedTile } from './RedTile.js';
-import { BlueTile } from './BlueTile.js';
+import { RedPiece } from './Pieces/RedPiece.js';
+import { BluePiece } from './Pieces/BluePiece.js';
+import { Transponder } from './Pieces/Transponder.js';
 import { InteractionManager } from './InteractionManager.js';
+import { Piece } from './Piece.js';
 
 // Wait for the DOM to load completely before accessing elements
 document.addEventListener('DOMContentLoaded', function() {
@@ -23,28 +25,32 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`[${timestamp}] ${message}`, data ? data : '');
     }
 
-    // Set desired logical canvas size (before DPI scaling)
-    const logicalWidth = window.innerWidth * 0.8;
-    const logicalHeight = window.innerHeight * 0.9;
+    // Function to update canvas dimensions
+    function updateCanvasDimensions(): { width: number, height: number } {
+        const container = canvas.parentElement!;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
 
-    // Handle high DPI displays
-    const dpr = window.devicePixelRatio || 1;
-    
-    // Set the canvas size accounting for device pixel ratio
-    canvas.width = logicalWidth * dpr;
-    canvas.height = logicalHeight * dpr;
-    
-    // Scale the canvas CSS size
-    canvas.style.width = `${logicalWidth}px`;
-    canvas.style.height = `${logicalHeight}px`;
-    
-    // Scale the context to handle the device pixel ratio
-    ctx.scale(dpr, dpr);
-    
-    // Enable image smoothing
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+        // Set canvas size accounting for device pixel ratio
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = containerWidth * dpr;
+        canvas.height = containerHeight * dpr;
 
+        // Scale the context to handle the device pixel ratio
+        ctx.scale(dpr, dpr);
+
+        // Enable image smoothing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        return {
+            width: containerWidth,
+            height: containerHeight
+        };
+    }
+
+    // Initial canvas setup
+    const { width: logicalWidth, height: logicalHeight } = updateCanvasDimensions();
     canvas.style.touchAction = 'none'; // Prevent default touch actions
 
     // Initialize game components with scaled hex size
@@ -60,32 +66,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const interactionManager = new InteractionManager(canvas, ctx);
     interactionManager.setGridHexagons(allHexagons);
 
-    // Split hexagons into left and right halves based on x coordinate
-    const centerX = logicalWidth / 2;
-    const leftHexagons = allHexagons.filter(hex => hex.x < centerX);
-    const rightHexagons = allHexagons.filter(hex => hex.x >= centerX);
+    // Set up the interaction manager reference in Piece class
+    Piece.setInteractionManager(interactionManager);
 
-    // Create individual red tiles on the left
-    leftHexagons.forEach(hexagon => {
-        const redTile = new RedTile(ctx, hexSize, hexagon);
-        interactionManager.addTile(redTile);
-    });
+    // Find the far left and far right hexagons
+    const leftHexagon = allHexagons.find(hex => hex.q === -6 && hex.r === 0);
+    const rightHexagon = allHexagons.find(hex => hex.q === 6 && hex.r === 0);
+    const transponderHexagon = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
 
-    // Create individual blue tiles on the right
-    rightHexagons.forEach(hexagon => {
-        const blueTile = new BlueTile(ctx, hexSize, hexagon);
-        interactionManager.addTile(blueTile);
-    });
+    if (leftHexagon) {
+        const redPiece = new RedPiece(ctx, hexSize, leftHexagon);
+        interactionManager.addPiece(redPiece);
+    }
+
+    if (rightHexagon) {
+        const bluePiece = new BluePiece(ctx, hexSize, rightHexagon);
+        interactionManager.addPiece(bluePiece);
+    }
+
+    if (transponderHexagon) {
+        const transponder = new Transponder(ctx, hexSize, transponderHexagon);
+        interactionManager.addPiece(transponder);
+    }
 
     // Animation loop
     function animate(): void {
-        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+        const { width: currentWidth, height: currentHeight } = updateCanvasDimensions();
+        ctx.clearRect(0, 0, currentWidth, currentHeight);
         
         // Draw the black grid first
         blackGrid.draw();
         
-        // Draw all tiles using the drag drop manager
+        // Draw all pieces using the drag drop manager
         interactionManager.draw();
+        
+        // Draw coordinates last so they appear on top
+        blackGrid.drawCoordinates();
         
         requestAnimationFrame(animate);
     }
@@ -93,29 +109,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Start the animation loop
     animate();
 
+    // Handle coordinate toggle
+    const showCoordinatesCheckbox = document.getElementById('showCoordinates') as HTMLInputElement;
+    showCoordinatesCheckbox.addEventListener('change', function() {
+        blackGrid.setShowCoordinates(this.checked);
+    });
+
     // Handle window resize
     window.addEventListener('resize', function() {
-        // Update logical dimensions
-        const logicalWidth = window.innerWidth * 0.8;
-        const logicalHeight = window.innerHeight * 0.9;
+        const { width: logicalWidth } = updateCanvasDimensions();
         
-        const dpr = window.devicePixelRatio || 1;
-        
-        // Update canvas size for new DPI
-        canvas.width = logicalWidth * dpr;
-        canvas.height = logicalHeight * dpr;
-        
-        // Update CSS size
-        canvas.style.width = `${logicalWidth}px`;
-        canvas.style.height = `${logicalHeight}px`;
-        
-        // Reset the scale transform
-        ctx.scale(dpr, dpr);
-        
-        // Restore image smoothing settings
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
         // Recalculate hex size based on new dimensions
         const baseHexSize = 50;
         const newHexSize = baseHexSize * (logicalWidth / 1920);
@@ -128,12 +131,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update drag drop manager with new hexagons
         interactionManager.setGridHexagons(updatedHexagons);
 
-        // Update all existing tiles with new size and positions
-        const centerX = logicalWidth / 2;
-        const leftHexagons = updatedHexagons.filter(hex => hex.x < centerX);
-        const rightHexagons = updatedHexagons.filter(hex => hex.x >= centerX);
+        // Find the far hexagons in the updated grid
+        const leftHexagon = updatedHexagons.find(hex => hex.q === -6 && hex.r === 0);
+        const rightHexagon = updatedHexagons.find(hex => hex.q === 6 && hex.r === 0);
+        const transponderHexagon = updatedHexagons.find(hex => hex.q === 0 && hex.r === -6);
 
-        interactionManager.updateTileSizes(newHexSize, leftHexagons, rightHexagons);
+        // Update all existing pieces with new size and positions
+        const leftHexagons = leftHexagon ? [leftHexagon] : [];
+        const rightHexagons = rightHexagon ? [rightHexagon] : [];
+        const allHexagons = [
+            ...leftHexagons,
+            ...rightHexagons,
+            ...(transponderHexagon ? [transponderHexagon] : [])
+        ];
+        interactionManager.updatePieceSizes(newHexSize, leftHexagons, rightHexagons);
     });
 
     // Log initial state

@@ -13,14 +13,46 @@
             align-items: center;
             height: 100vh;
             background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        .canvas-container {
+            width: 150vh; /* Width is 1.5 times the viewport height */
+            height: 95vh; /* Height is 95% of viewport height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* Added for absolute positioning of checkbox */
         }
         canvas {
+            width: 100%;
+            height: 100%;
             border: 1px solid #000;
+        }
+        .coordinate-toggle {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .coordinate-toggle input[type="checkbox"] {
+            margin: 0;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+        <label class="coordinate-toggle">
+            <input type="checkbox" id="showCoordinates" checked>
+            Show Coordinates
+        </label>
+    </div>
     <script type="module" src="dist/game.js"></script>
 </body>
 </html> 

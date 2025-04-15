@@ -1,5 +1,5 @@
 import { GridHexagon } from './types.js';
-import { RedTile } from './RedTile.js';
+import { InteractionManager } from './InteractionManager.js';
 
 export interface Point {
     x: number;
@@ -12,7 +12,13 @@ export interface HexCoord {
     s: number;
 }
 
-export abstract class Tile {
+export abstract class Piece {
+    private static interactionManager: InteractionManager;
+
+    public static setInteractionManager(manager: InteractionManager): void {
+        Piece.interactionManager = manager;
+    }
+
     public x: number;
     public y: number;
     public q: number;
@@ -25,7 +31,7 @@ export abstract class Tile {
 
     // Optional method for handling drop events
     public onDropped?(fromPosition: { q: number, r: number, s: number }): void {
-        console.log("Tile dropped into a new position.");
+        console.log("Piece dropped into a new position.");
     }
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
@@ -39,12 +45,21 @@ export abstract class Tile {
         this.zIndex = 0;
     }
 
+    // Get all pieces at specific axial coordinates
+    protected getPiecesAtPosition(q: number, r: number, s: number): Piece[] {
+        if (!Piece.interactionManager) {
+            console.warn('InteractionManager not set - cannot get pieces at position');
+            return [];
+        }
+        return Piece.interactionManager.getPiecesAtPosition(q, r, s);
+    }
+
     // Default stacking behavior - go on top
-    public determineZIndex(existingStack: Tile[]): number {
+    public determineZIndex(existingStack: Piece[]): number {
         return Math.max(...existingStack.map(t => t.zIndex), 0) + 1;
     }
 
-    // Method to check if a point is within this tile
+    // Method to check if a point is within this piece
     public containsPoint(point: Point): boolean {
         const dx = point.x - this.x;
         const dy = point.y - this.y;
@@ -52,7 +67,7 @@ export abstract class Tile {
         return distance <= this.hexSize * 1.2;
     }
 
-    // Method to move tile to a new position
+    // Method to move piece to a new position
     public moveTo(position: GridHexagon): void {
         this.x = position.x;
         this.y = position.y;
@@ -66,7 +81,12 @@ export abstract class Tile {
         return this.hexSize;
     }
 
-    // Abstract method that each tile type must implement
+    // Method to determine if a piece can move to specific coordinates
+    public canMoveTo(q: number, r: number, s: number): boolean {
+        return true; // Default implementation allows movement to any position
+    }
+
+    // Abstract method that each piece type must implement
     public abstract draw(isSelected: boolean): void;
 
     // Helper method to draw hexagon path (used by child classes)
@@ -89,9 +109,9 @@ export abstract class Tile {
         this.hexSize = newBaseHexSize * ratio;
     }
 
-    // Method to determine if the tile can be moved
+    // Method to determine if the piece can be moved
     public isMovable(): boolean {
-        return true; // Default behavior: tiles are movable
+        return true; // Default behavior: pieces are movable
     }
 
     // Optional method for handling click interactions

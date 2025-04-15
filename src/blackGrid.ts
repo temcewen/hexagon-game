@@ -9,6 +9,7 @@ class BlackGrid {
     private horizontalSpacing: number;
     private verticalSpacing: number;
     private hexagons: GridHexagon[];
+    private showCoordinates: boolean = true;
 
     constructor(canvas: HTMLCanvasElement, hexSize: number) {
         this.canvas = canvas;
@@ -25,7 +26,7 @@ class BlackGrid {
         this.hexagons = [];
     }
 
-    private drawHexagon(x: number, y: number): void {
+    private drawHexagon(x: number, y: number, q: number, r: number): void {
         this.ctx.beginPath();
         for (let i = 0; i < 6; i++) {
             const angle = 2 * Math.PI / 6 * i;
@@ -64,9 +65,27 @@ class BlackGrid {
         }
     }
 
+    public drawCoordinates(): void {
+        if (!this.showCoordinates) return;
+
+        this.ctx.save();
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = `bold ${this.hexSize * 0.25}px Arial`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        
+        this.hexagons.forEach(hexagon => {
+            const text = `(${hexagon.q}, ${hexagon.r})`;
+            const textY = hexagon.y + this.hexSize * 0.7;
+            this.ctx.fillText(text, hexagon.x, textY);
+        });
+        
+        this.ctx.restore();
+    }
+
     public draw(): void {
         this.hexagons.forEach(hexagon => {
-            this.drawHexagon(hexagon.x, hexagon.y);
+            this.drawHexagon(hexagon.x, hexagon.y, hexagon.q, hexagon.r);
         });
     }
 
@@ -81,6 +100,10 @@ class BlackGrid {
         this.horizontalSpacing = 0.87 * this.hexWidth;
         this.verticalSpacing = 0.87 * this.hexHeight;
         this.hexagons = []; // Clear existing hexagons, they will be recreated with createGrid()
+    }
+
+    public setShowCoordinates(show: boolean): void {
+        this.showCoordinates = show;
     }
 }
 

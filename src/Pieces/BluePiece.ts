@@ -1,14 +1,14 @@
-import { GridHexagon } from './types.js';
-import { Tile } from './Tile.js';
-import { PopupMenu, PopupMenuItem } from './PopupMenu.js';
+import { GridHexagon } from '../types.js';
+import { Piece } from '../Piece.js';
+import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 
-export class BlueTile extends Tile {
+export class BluePiece extends Piece {
     private commanderImage: HTMLImageElement;
     private popupMenu: PopupMenu;
     private rotationDegrees: number = 0;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
-        super(ctx, hexSize * 0.6, position); // Blue tiles are 60% the size of grid hexagons
+        super(ctx, hexSize * 0.6, position); // Blue pieces are 60% the size of grid hexagons
         
         this.commanderImage = new Image();
         this.commanderImage.src = 'assets/commander-icon.png';
@@ -129,8 +129,8 @@ export class BlueTile extends Tile {
         this.ctx.restore();
     }
 
-    // Custom stacking behavior - blue tiles always go on top
-    public determineZIndex(existingStack: Tile[]): number {
+    // Custom stacking behavior - blue pieces always go on top
+    public determineZIndex(existingStack: Piece[]): number {
         // Get the highest z-index in the stack and add an offset
         return Math.max(...existingStack.map(t => t.zIndex), 0) + 1000;
     }

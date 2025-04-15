@@ -1,4 +1,4 @@
-import { Point } from './Tile.js';
+import { Point } from './Piece.js';
 
 export interface PopupMenuItem {
     text?: string;
