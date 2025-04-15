@@ -1,6 +1,7 @@
 import BlackGrid from './blackGrid.js';
-import RedTiles from './redTiles.js';
-import BlueTiles from './blueTiles.js';
+import { RedTile } from './RedTile.js';
+import { BlueTile } from './BlueTile.js';
+import { InteractionManager } from './InteractionManager.js';
 
 // Wait for the DOM to load completely before accessing elements
 document.addEventListener('DOMContentLoaded', function() {
@@ -49,48 +50,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize game components with scaled hex size
     const baseHexSize = 50;
     const hexSize = baseHexSize * (logicalWidth / 1920); // Scale based on logical width
+    
+    // Create the black grid
     const blackGrid = new BlackGrid(canvas, hexSize);
-    const redTiles = new RedTiles(canvas, hexSize);
-    const blueTiles = new BlueTiles(canvas, hexSize);
-
-    // Create the game grid
     blackGrid.createGrid();
     const allHexagons = blackGrid.getHexagons();
     
+    // Create drag and drop manager
+    const interactionManager = new InteractionManager(canvas, ctx);
+    interactionManager.setGridHexagons(allHexagons);
+
     // Split hexagons into left and right halves based on x coordinate
-    const centerX = logicalWidth / 2; // Use logical width for calculations
+    const centerX = logicalWidth / 2;
     const leftHexagons = allHexagons.filter(hex => hex.x < centerX);
     const rightHexagons = allHexagons.filter(hex => hex.x >= centerX);
 
-    // Create red tiles on the left and blue tiles on the right
-    redTiles.createTiles(leftHexagons);
-    blueTiles.createTiles(rightHexagons);
-    
-    // Set up event listeners with reference to black hexagons
-    redTiles.setupEventListeners(blackGrid.getHexagons());
-    blueTiles.setupEventListeners(blackGrid.getHexagons());
+    // Create individual red tiles on the left
+    leftHexagons.forEach(hexagon => {
+        const redTile = new RedTile(ctx, hexSize, hexagon);
+        interactionManager.addTile(redTile);
+    });
+
+    // Create individual blue tiles on the right
+    rightHexagons.forEach(hexagon => {
+        const blueTile = new BlueTile(ctx, hexSize, hexagon);
+        interactionManager.addTile(blueTile);
+    });
 
     // Animation loop
     function animate(): void {
-        ctx.clearRect(0, 0, logicalWidth, logicalHeight); // Use logical dimensions
+        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
         
         // Draw the black grid first
         blackGrid.draw();
         
-        // Get all tiles and sort them by z-index
-        const allTiles = [
-            ...redTiles.getHexagons(),
-            ...blueTiles.getHexagons()
-        ].sort((a, b) => a.zIndex - b.zIndex);
-
-        // Draw tiles in z-index order
-        allTiles.forEach(tile => {
-            if (redTiles.hasHexagon(tile)) {
-                redTiles.drawSingleHexagon(tile, tile === redTiles.getSelectedHexagon());
-            } else {
-                blueTiles.drawSingleHexagon(tile, tile === blueTiles.getSelectedHexagon());
-            }
-        });
+        // Draw all tiles using the drag drop manager
+        interactionManager.draw();
         
         requestAnimationFrame(animate);
     }
@@ -102,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', function() {
         // Update logical dimensions
         const logicalWidth = window.innerWidth * 0.8;
-        const logicalHeight = window.innerHeight * 0.9; // Match the new height ratio
+        const logicalHeight = window.innerHeight * 0.9;
         
         const dpr = window.devicePixelRatio || 1;
         
@@ -120,6 +115,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Restore image smoothing settings
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+
+        // Recalculate hex size based on new dimensions
+        const baseHexSize = 50;
+        const newHexSize = baseHexSize * (logicalWidth / 1920);
+
+        // Recreate the black grid with new size
+        blackGrid.updateHexSize(newHexSize);
+        blackGrid.createGrid();
+        const updatedHexagons = blackGrid.getHexagons();
+
+        // Update drag drop manager with new hexagons
+        interactionManager.setGridHexagons(updatedHexagons);
+
+        // Update all existing tiles with new size and positions
+        const centerX = logicalWidth / 2;
+        const leftHexagons = updatedHexagons.filter(hex => hex.x < centerX);
+        const rightHexagons = updatedHexagons.filter(hex => hex.x >= centerX);
+
+        interactionManager.updateTileSizes(newHexSize, leftHexagons, rightHexagons);
     });
 
     // Log initial state

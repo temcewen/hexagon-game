@@ -28,7 +28,7 @@ class BlackGrid {
     private drawHexagon(x: number, y: number): void {
         this.ctx.beginPath();
         for (let i = 0; i < 6; i++) {
-            const angle = Math.PI / 2 + (2 * Math.PI / 6 * i);
+            const angle = 2 * Math.PI / 6 * i;
             const hx = x + this.hexSize * Math.cos(angle);
             const hy = y + this.hexSize * Math.sin(angle);
             if (i === 0) {
@@ -55,8 +55,8 @@ class BlackGrid {
                 const s = -q - r;
                 
                 if (Math.max(Math.abs(q), Math.abs(r), Math.abs(s)) < gridRadius) {
-                    const x = centerX + this.horizontalSpacing * (q + r/2);
-                    const y = centerY + this.verticalSpacing * r;
+                    const x = centerX + this.verticalSpacing * q;
+                    const y = centerY + this.horizontalSpacing * (-r - q/2);
                     
                     this.hexagons.push({ x, y, q, r, s });
                 }
@@ -72,6 +72,15 @@ class BlackGrid {
 
     public getHexagons(): GridHexagon[] {
         return this.hexagons;
+    }
+
+    public updateHexSize(newHexSize: number): void {
+        this.hexSize = newHexSize;
+        this.hexHeight = Math.sqrt(3) * newHexSize;
+        this.hexWidth = newHexSize * 2;
+        this.horizontalSpacing = 0.87 * this.hexWidth;
+        this.verticalSpacing = 0.87 * this.hexHeight;
+        this.hexagons = []; // Clear existing hexagons, they will be recreated with createGrid()
     }
 }
 
