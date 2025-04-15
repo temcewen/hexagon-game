@@ -2,11 +2,23 @@ import { GridHexagon, TileHexagon } from './types.js';
 import { MovableTile } from './movableTile.js';
 
 class BlueTiles extends MovableTile {
+    private commanderImage: HTMLImageElement;
+
     constructor(canvas: HTMLCanvasElement, hexSize: number) {
         super(canvas, hexSize * 0.6);
+        this.commanderImage = new Image();
+        this.commanderImage.src = 'assets/commander-icon.png';
+        
+        // Enable image smoothing for this context
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
     }
 
     protected drawHexagon(x: number, y: number, isSelected: boolean = false): void {
+        // Save the current context state
+        this.ctx.save();
+        
+        // Draw hexagon path for hit detection and selection
         this.ctx.beginPath();
         for (let i = 0; i < 6; i++) {
             const angle = Math.PI / 2 + (2 * Math.PI / 6 * i);
@@ -19,8 +31,41 @@ class BlueTiles extends MovableTile {
             }
         }
         this.ctx.closePath();
-        this.ctx.fillStyle = isSelected ? '#4444ff' : 'blue';
-        this.ctx.fill();
+
+        // Calculate image size based on hex size, accounting for device pixel ratio
+        const imageSize = this.hexSize * 1.5;
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Draw the commander icon with proper scaling
+        if (this.commanderImage.complete) {
+            if (isSelected) {
+                // When selected/dragging, draw a semi-transparent version first as a shadow
+                this.ctx.globalAlpha = 0.6;
+                this.ctx.drawImage(
+                    this.commanderImage,
+                    x - imageSize/2,
+                    y - imageSize/2,
+                    imageSize,
+                    imageSize
+                );
+                
+                // Then draw the main image with slight transparency
+                this.ctx.globalAlpha = 0.8;
+            }
+            else {
+
+                this.ctx.drawImage(
+                    this.commanderImage,
+                    x - imageSize/2,
+                    y - imageSize/2,
+                    imageSize,
+                    imageSize
+                );
+            }
+        }
+        
+        // Restore the context state (this will reset globalAlpha to 1)
+        this.ctx.restore();
     }
 
     /**

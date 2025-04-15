@@ -75,10 +75,26 @@ export abstract class MovableTile {
         this.drawHexagon(hexagon.x, hexagon.y, isSelected);
     }
 
+    protected getMousePos(evt: MouseEvent): MousePosition {
+        const rect = this.canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Calculate the scale between CSS pixels and canvas logical pixels
+        const scaleX = (this.canvas.width / dpr) / rect.width;
+        const scaleY = (this.canvas.height / dpr) / rect.height;
+
+        return {
+            x: (evt.clientX - rect.left) * scaleX,
+            y: (evt.clientY - rect.top) * scaleY
+        };
+    }
+
     protected isPointInHexagon(x: number, y: number, hexX: number, hexY: number): boolean {
+        // Convert coordinates to logical space
         const dx = x - hexX;
         const dy = y - hexY;
         const distance = Math.sqrt(dx * dx + dy * dy);
+        // Adjust hit detection radius for the new hex size
         const hitDetectionRadius = this.hexSize * 1.2;
         return distance <= hitDetectionRadius;
     }
@@ -99,16 +115,6 @@ export abstract class MovableTile {
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
         this.canvas.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
-    }
-
-    protected getMousePos(evt: MouseEvent): MousePosition {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        return {
-            x: (evt.clientX - rect.left) * scaleX,
-            y: (evt.clientY - rect.top) * scaleY
-        };
     }
 
     protected handleMouseDown(e: MouseEvent): void {

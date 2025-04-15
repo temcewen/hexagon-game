@@ -47,8 +47,8 @@ class BlackGrid {
 
     public createGrid(): void {
         const gridRadius = 7;
-        const centerX = this.canvas.width / 2;
-        const centerY = this.canvas.height / 2;
+        const centerX = this.canvas.width / (window.devicePixelRatio || 1) / 2;
+        const centerY = this.canvas.height / (window.devicePixelRatio || 1) / 2;
 
         for (let q = -gridRadius + 1; q < gridRadius; q++) {
             for (let r = -gridRadius + 1; r < gridRadius; r++) {

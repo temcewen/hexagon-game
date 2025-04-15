@@ -19,7 +19,7 @@ class RedTiles extends MovableTile {
             }
         }
         this.ctx.closePath();
-        this.ctx.fillStyle = isSelected ? '#ff4444' : 'red';
+        this.ctx.fillStyle = isSelected ? 'rgba(255, 0, 0, .6)' : 'red';
         this.ctx.fill();
     }
 
