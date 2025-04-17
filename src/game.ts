@@ -4,6 +4,7 @@ import { BluePiece } from './Pieces/BluePiece.js';
 import { Transponder } from './Pieces/Transponder.js';
 import { InteractionManager } from './InteractionManager.js';
 import { Piece } from './Piece.js';
+import { Mage } from './Pieces/Mage.js';
 
 // Wait for the DOM to load completely before accessing elements
 document.addEventListener('DOMContentLoaded', function() {
@@ -73,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialRedHex = allHexagons.find(hex => hex.q === -6 && hex.r === 0);
     const initialBlueHex = allHexagons.find(hex => hex.q === 6 && hex.r === 0);
     const initialTransponderHex = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
+    const initialMageHex = allHexagons.find(hex => hex.q === 0 && hex.r === 0);
 
     if (initialRedHex) {
         const redPiece = new RedPiece(ctx, hexSize, initialRedHex);
@@ -87,6 +89,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialTransponderHex) {
         const transponder = new Transponder(ctx, hexSize, initialTransponderHex);
         interactionManager.addPiece(transponder);
+    }
+
+    if (initialMageHex) {
+        const mage = new Mage(ctx, hexSize, initialMageHex);
+        interactionManager.addPiece(mage);
     }
 
     // Animation loop

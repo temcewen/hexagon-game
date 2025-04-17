@@ -1,5 +1,5 @@
 import { GridHexagon } from './types.js';
-import { Point, Piece } from './Piece.js';
+import { Point, Piece, HexCoord } from './Piece.js';
 import { RedPiece } from './Pieces/RedPiece.js';
 import { BluePiece } from './Pieces/BluePiece.js';
 import { Transponder } from './Pieces/Transponder.js';
@@ -19,6 +19,9 @@ export class InteractionManager {
     private mouseDownPos: Point;
     private readonly CLICK_THRESHOLD_MS: number = 200; // Max time for a click
     private readonly CLICK_DISTANCE_THRESHOLD: number = 5; // Max distance for a click
+    private validMoveHexagons: HexCoord[] = [];
+    private highlightBlinkTimer: number = 0;
+    private readonly BLINK_SPEED_MS: number = 1000; // Blink cycle duration in ms
 
     constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
         this.canvas = canvas;
@@ -33,6 +36,19 @@ export class InteractionManager {
         this.mouseDownPos = { x: 0, y: 0 };
 
         this.setupEventListeners();
+        // Start the animation loop for blinking
+        this.startBlinkTimer();
+    }
+
+    private startBlinkTimer(): void {
+        // Update the highlight blink effect
+        this.highlightBlinkTimer = window.setInterval(() => {
+            // This will cause the draw method to update the blinking effect
+            if (this.isDragging && this.selectedPiece) {
+                // Force redraw to update the blinking effect
+                this.draw();
+            }
+        }, 100); // Update every 100ms for smooth animation
     }
 
     public addPiece(piece: Piece): void {
@@ -41,6 +57,10 @@ export class InteractionManager {
 
     public setGridHexagons(hexagons: GridHexagon[]): void {
         this.gridHexagons = hexagons;
+    }
+
+    public getAllGridHexagons(): GridHexagon[] {
+        return this.gridHexagons;
     }
 
     // Get all pieces at specific axial coordinates
@@ -113,6 +133,9 @@ export class InteractionManager {
             this.selectedPiece.originalZIndex = this.selectedPiece.zIndex;
             this.selectedPiece.zIndex = 99999; // Extremely high z-index during drag
             console.log('Interaction type:', InteractionType.DRAG);
+            
+            // Get valid moves when starting to drag
+            this.validMoveHexagons = this.selectedPiece.getValidMoves();
         }
 
         if (this.isDragging) {
@@ -187,6 +210,8 @@ export class InteractionManager {
                     // Reset drag state
                     this.isDragging = false;
                     this.selectedPiece = null;
+                    // Clear valid move highlights
+                    this.validMoveHexagons = [];
                     return;
                 }
 
@@ -220,6 +245,8 @@ export class InteractionManager {
 
         this.isDragging = false;
         this.selectedPiece = null;
+        // Clear valid move highlights
+        this.validMoveHexagons = [];
     }
 
     private handleMouseLeave(): void {
@@ -229,10 +256,68 @@ export class InteractionManager {
             this.selectedPiece.y = this.dragStartPos.y;
             this.isDragging = false;
             this.selectedPiece = null;
+            // Clear valid move highlights
+            this.validMoveHexagons = [];
+        }
+    }
+
+    // Helper method to draw a hexagon at a specific position
+    private drawHexagon(x: number, y: number, size: number, fillStyle: string, strokeStyle?: string): void {
+        this.ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = 2 * Math.PI / 6 * i;
+            const hx = x + size * Math.cos(angle);
+            const hy = y + size * Math.sin(angle);
+            if (i === 0) {
+                this.ctx.moveTo(hx, hy);
+            } else {
+                this.ctx.lineTo(hx, hy);
+            }
+        }
+        this.ctx.closePath();
+        
+        if (fillStyle) {
+            this.ctx.fillStyle = fillStyle;
+            this.ctx.fill();
+        }
+        
+        if (strokeStyle) {
+            this.ctx.strokeStyle = strokeStyle;
+            this.ctx.stroke();
+        }
+    }
+
+    // Draw valid move highlights
+    private drawValidMoveHighlights(): void {
+        if (!this.isDragging || !this.selectedPiece || this.validMoveHexagons.length === 0) return;
+        
+        // Calculate opacity based on time for blinking effect
+        const now = Date.now();
+        const phase = (now % this.BLINK_SPEED_MS) / this.BLINK_SPEED_MS;
+        
+        // Opacity varies between 0.2 and 0.5 for a subtle pulsing effect
+        const opacity = 0.2 + Math.sin(phase * Math.PI * 2) * 0.15;
+        const highlightColor = `rgba(0, 255, 0, ${opacity})`;
+        
+        // Draw highlight for each valid move hexagon
+        for (const moveHex of this.validMoveHexagons) {
+            // Find the corresponding grid hexagon to get the x,y coordinates
+            const hexagon = this.gridHexagons.find(h => h.q === moveHex.q && h.r === moveHex.r && h.s === moveHex.s);
+            if (hexagon) {
+                this.drawHexagon(
+                    hexagon.x, 
+                    hexagon.y, 
+                    this.selectedPiece.getHexSize(), // Use the same size as the hexagon
+                    highlightColor
+                );
+            }
         }
     }
 
     public draw(): void {
+        // Draw valid move highlights first (under pieces)
+        this.drawValidMoveHighlights();
+        
         // Sort pieces by z-index
         const sortedPieces = [...this.pieces].sort((a, b) => a.zIndex - b.zIndex);
         

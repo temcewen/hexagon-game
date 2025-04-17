@@ -29,11 +29,6 @@ export abstract class Piece {
     protected hexSize: number;
     protected ctx: CanvasRenderingContext2D;
 
-    // Optional method for handling drop events
-    public onDropped?(fromPosition: { q: number, r: number, s: number }): void {
-        console.log("Piece dropped into a new position.");
-    }
-
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
         this.ctx = ctx;
         this.hexSize = hexSize;
@@ -43,6 +38,11 @@ export abstract class Piece {
         this.r = position.r;
         this.s = position.s;
         this.zIndex = 0;
+    }
+
+    // Optional method for handling drop events
+    public onDropped?(fromPosition: { q: number, r: number, s: number }): void {
+        // Base implementation does nothing.
     }
 
     // Get all pieces at specific axial coordinates
@@ -83,7 +83,24 @@ export abstract class Piece {
 
     // Method to determine if a piece can move to specific coordinates
     public canMoveTo(q: number, r: number, s: number): boolean {
-        return true; // Default implementation allows movement to any position
+        return this.getValidMoves().some(move => 
+            move.q === q && move.r === r && move.s === s
+        );
+    }
+
+    // New method to get all valid move positions for this piece
+    public getValidMoves(): HexCoord[] {
+        if (!Piece.interactionManager) {
+            console.warn('InteractionManager not set - cannot get valid moves');
+            return [];
+        }
+        
+        // Default implementation: can move to any grid hexagon
+        return Piece.interactionManager.getAllGridHexagons().map((hex: GridHexagon) => ({
+            q: hex.q,
+            r: hex.r,
+            s: hex.s
+        }));
     }
 
     // Abstract method that each piece type must implement
