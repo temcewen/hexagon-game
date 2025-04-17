@@ -69,23 +69,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up the interaction manager reference in Piece class
     Piece.setInteractionManager(interactionManager);
 
-    // Find the far left and far right hexagons
-    const leftHexagon = allHexagons.find(hex => hex.q === -6 && hex.r === 0);
-    const rightHexagon = allHexagons.find(hex => hex.q === 6 && hex.r === 0);
-    const transponderHexagon = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
+    // Find specific hexagons for initial piece placement
+    const initialRedHex = allHexagons.find(hex => hex.q === -6 && hex.r === 0);
+    const initialBlueHex = allHexagons.find(hex => hex.q === 6 && hex.r === 0);
+    const initialTransponderHex = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
 
-    if (leftHexagon) {
-        const redPiece = new RedPiece(ctx, hexSize, leftHexagon);
+    if (initialRedHex) {
+        const redPiece = new RedPiece(ctx, hexSize, initialRedHex);
         interactionManager.addPiece(redPiece);
     }
 
-    if (rightHexagon) {
-        const bluePiece = new BluePiece(ctx, hexSize, rightHexagon);
+    if (initialBlueHex) {
+        const bluePiece = new BluePiece(ctx, hexSize, initialBlueHex);
         interactionManager.addPiece(bluePiece);
     }
 
-    if (transponderHexagon) {
-        const transponder = new Transponder(ctx, hexSize, transponderHexagon);
+    if (initialTransponderHex) {
+        const transponder = new Transponder(ctx, hexSize, initialTransponderHex);
         interactionManager.addPiece(transponder);
     }
 
@@ -131,20 +131,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update drag drop manager with new hexagons
         interactionManager.setGridHexagons(updatedHexagons);
 
-        // Find the far hexagons in the updated grid
-        const leftHexagon = updatedHexagons.find(hex => hex.q === -6 && hex.r === 0);
-        const rightHexagon = updatedHexagons.find(hex => hex.q === 6 && hex.r === 0);
-        const transponderHexagon = updatedHexagons.find(hex => hex.q === 0 && hex.r === -6);
-
-        // Update all existing pieces with new size and positions
-        const leftHexagons = leftHexagon ? [leftHexagon] : [];
-        const rightHexagons = rightHexagon ? [rightHexagon] : [];
-        const allHexagons = [
-            ...leftHexagons,
-            ...rightHexagons,
-            ...(transponderHexagon ? [transponderHexagon] : [])
-        ];
-        interactionManager.updatePieceSizes(newHexSize, leftHexagons, rightHexagons);
+        // Update all existing pieces with new size, finding their positions in the updated grid
+        interactionManager.updatePieceSizes(newHexSize, updatedHexagons);
     });
 
     // Log initial state

@@ -9,7 +9,7 @@ class BlackGrid {
     private horizontalSpacing: number;
     private verticalSpacing: number;
     private hexagons: GridHexagon[];
-    private showCoordinates: boolean = true;
+    private showCoordinates: boolean = false;
 
     constructor(canvas: HTMLCanvasElement, hexSize: number) {
         this.canvas = canvas;

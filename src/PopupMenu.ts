@@ -4,6 +4,8 @@ export interface PopupMenuItem {
     text?: string;
     imageUrl?: string;
     callback: () => void;
+    disabled?: boolean;
+    disabledReason?: string;
 }
 
 export class PopupMenu {
@@ -70,13 +72,16 @@ export class PopupMenu {
         items.forEach((item, index) => {
             const menuItem = document.createElement('div');
             menuItem.style.padding = '8px 16px';
-            menuItem.style.cursor = 'pointer';
+            menuItem.style.cursor = item.disabled ? 'not-allowed' : 'pointer';
             menuItem.style.whiteSpace = 'nowrap';
             menuItem.style.fontFamily = 'Arial, sans-serif';
+            menuItem.style.color = item.disabled ? '#999' : 'inherit';
             
             // Handle hover effect
             menuItem.addEventListener('mouseenter', () => {
-                menuItem.style.backgroundColor = '#f0f0f0';
+                if (!item.disabled) {
+                    menuItem.style.backgroundColor = '#f0f0f0';
+                }
             });
             menuItem.addEventListener('mouseleave', () => {
                 menuItem.style.backgroundColor = 'transparent';
@@ -90,6 +95,9 @@ export class PopupMenu {
                 img.style.height = '16px';
                 img.style.marginRight = '8px';
                 img.style.verticalAlign = 'middle';
+                if (item.disabled) {
+                    img.style.opacity = '0.5';
+                }
                 menuItem.appendChild(img);
             }
             
@@ -100,6 +108,14 @@ export class PopupMenu {
             
             // Add click handler
             menuItem.addEventListener('click', () => {
+                if (item.disabled) {
+                    if (!item.disabledReason || item.disabledReason.trim() === '') {
+                        console.error('Disabled menu item must have a non-empty disabledReason');
+                        return;
+                    }
+                    window.alert(item.disabledReason);
+                    return;
+                }
                 item.callback();
                 if (!this.forceKeepOpen) {
                     this.hide();

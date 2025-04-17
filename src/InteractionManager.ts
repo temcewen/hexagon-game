@@ -4,6 +4,7 @@ import { RedPiece } from './Pieces/RedPiece.js';
 import { BluePiece } from './Pieces/BluePiece.js';
 import { Transponder } from './Pieces/Transponder.js';
 import { InteractionType } from './InteractionType.js';
+import { Beacon } from './Pieces/Beacon.js';
 
 export class InteractionManager {
     private canvas: HTMLCanvasElement;
@@ -241,30 +242,31 @@ export class InteractionManager {
         });
     }
 
-    public updatePieceSizes(newHexSize: number, leftHexagons: GridHexagon[], rightHexagons: GridHexagon[]): void {
-        // Store existing pieces
-        const existingPieces = [...this.pieces];
-        
-        // Clear current pieces
-        this.pieces = [];
-        
-        // Combine all hexagons for position matching
-        const allHexagons = [...leftHexagons, ...rightHexagons];
-        
-        // Recreate pieces with new sizes and positions
-        existingPieces.forEach(piece => {
-            const isRedPiece = piece instanceof RedPiece;
-            const isTransponder = piece instanceof Transponder;
-            
-            // Find the corresponding hexagon position from all hexagons
+    public updatePieceSizes(newHexSize: number, allHexagons: GridHexagon[]): void {
+        // Update each piece with the new size and find its corresponding hexagon in the new grid
+        this.pieces.forEach(piece => {
             const hexagon = allHexagons.find(h => h.q === piece.q && h.r === piece.r && h.s === piece.s);
             if (hexagon) {
                 // Update piece with new position and size
-                // Red pieces are 0.8x, Transponders are 1x, others (blue) are 0.6x
-                const sizeRatio = isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6);
+                // Beacons are 2.5x, Red pieces are 0.8x, Transponders are 1x, others (blue) are 0.6x
+                const isRedPiece = piece instanceof RedPiece;
+                const isTransponder = piece instanceof Transponder;
+                const isBeacon = piece instanceof Beacon;
+                const sizeRatio = isBeacon ? 1.0 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));
                 piece.updateSize(newHexSize, sizeRatio);
                 piece.moveTo(hexagon);
-                this.pieces.push(piece);
+            } else {
+                // Optional: Handle cases where a piece's hexagon might not exist after resize
+                // This could happen if the grid dimensions change significantly.
+                // For now, we'll log a warning. A more robust solution might involve
+                // snapping the piece to the nearest valid hexagon or removing it.
+                console.warn(`Could not find corresponding hexagon for piece at (${piece.q}, ${piece.r}, ${piece.s}) after resize.`);
+                // As a fallback, update the size but keep the old coords (which might be off-screen)
+                const isRedPiece = piece instanceof RedPiece;
+                const isTransponder = piece instanceof Transponder;
+                const isBeacon = piece instanceof Beacon;
+                const sizeRatio = isBeacon ? 2.5 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));
+                piece.updateSize(newHexSize, sizeRatio);
             }
         });
     }
