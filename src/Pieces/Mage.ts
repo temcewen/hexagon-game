@@ -1,8 +1,5 @@
 import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../types.js';
-import { Transponder } from './Transponder.js';
-import { BluePiece } from './BluePiece.js';
-import { RedPiece } from './RedPiece.js';
 import { Beacon } from './Beacon.js';
 import { PopupMenu } from '../PopupMenu.js';
 
@@ -22,15 +19,6 @@ export class Mage extends Piece {
     }
 
     public draw(isSelected: boolean): void {
-        // Draw selection indicator if selected
-        if (isSelected) {
-            this.ctx.save();
-            this.ctx.globalAlpha = 0.3;
-            this.ctx.fillStyle = '#ffff00';
-            this.drawHexagonPath();
-            this.ctx.fill();
-            this.ctx.restore();
-        }
 
         // Draw the image if loaded
         if (this.imageLoaded) {

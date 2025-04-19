@@ -23,7 +23,7 @@ export class Transponder extends Piece {
         
         // Load the robot image
         this.image = new Image();
-        this.image.src = 'assets/robot.png';
+        this.image.src = 'assets/transponder.png';
         this.image.onload = () => {
             this.imageLoaded = true;
         };

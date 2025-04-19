@@ -1,11 +1,9 @@
 import { GridHexagon } from './types.js';
 import { Point, Piece, HexCoord } from './Piece.js';
-import { RedPiece } from './Pieces/RedPiece.js';
-import { BluePiece } from './Pieces/BluePiece.js';
+import { Resource } from './Pieces/Resource.js';
 import { Transponder } from './Pieces/Transponder.js';
 import { InteractionType } from './InteractionType.js';
 import { Beacon } from './Pieces/Beacon.js';
-import { Mage } from './Pieces/Mage.js';
 
 export class InteractionManager {
     private canvas: HTMLCanvasElement;
@@ -447,7 +445,7 @@ export class InteractionManager {
             if (hexagon) {
                 // Update piece with new position and size
                 // Beacons are 2.5x, Red pieces are 0.8x, Transponders are 1x, others (blue) are 0.6x
-                const isRedPiece = piece instanceof RedPiece;
+                const isRedPiece = piece instanceof Resource;
                 const isTransponder = piece instanceof Transponder;
                 const isBeacon = piece instanceof Beacon;
                 const sizeRatio = isBeacon ? 1.0 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));
@@ -460,7 +458,7 @@ export class InteractionManager {
                 // snapping the piece to the nearest valid hexagon or removing it.
                 console.warn(`Could not find corresponding hexagon for piece at (${piece.q}, ${piece.r}, ${piece.s}) after resize.`);
                 // As a fallback, update the size but keep the old coords (which might be off-screen)
-                const isRedPiece = piece instanceof RedPiece;
+                const isRedPiece = piece instanceof Resource;
                 const isTransponder = piece instanceof Transponder;
                 const isBeacon = piece instanceof Beacon;
                 const sizeRatio = isBeacon ? 2.5 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));

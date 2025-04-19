@@ -1,12 +1,13 @@
 import BlackGrid from './blackGrid.js';
-import { RedPiece } from './Pieces/RedPiece.js';
-import { BluePiece } from './Pieces/BluePiece.js';
+import { Resource } from './Pieces/Resource.js';
+import { Commander } from './Pieces/Commander.js';
 import { Transponder } from './Pieces/Transponder.js';
 import { InteractionManager } from './InteractionManager.js';
 import { Piece } from './Piece.js';
 import { Mage } from './Pieces/Mage.js';
 import { Engineer } from './Pieces/Engineer.js';
 import { Berserker } from './Pieces/Berserker.js';
+import { Mystic } from './Pieces/Mystic.js';
 
 // Wait for the DOM to load completely before accessing elements
 document.addEventListener('DOMContentLoaded', function() {
@@ -79,15 +80,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialMageHex = allHexagons.find(hex => hex.q === 0 && hex.r === 0);
     const initialEngineerHex = allHexagons.find(hex => hex.q === 2 && hex.r === 4);
     const initialBerserkerHex = allHexagons.find(hex => hex.q === 3 && hex.r === 0);
+    const initialMysticHex = allHexagons.find(hex => hex.q === 1 && hex.r === -3);
 
     if (initialRedHex) {
-        const redPiece = new RedPiece(ctx, hexSize, initialRedHex);
+        const redPiece = new Resource(ctx, hexSize, initialRedHex);
         interactionManager.addPiece(redPiece);
     }
 
     if (initialBlueHex) {
-        const bluePiece = new BluePiece(ctx, hexSize, initialBlueHex);
-        interactionManager.addPiece(bluePiece);
+        const commander = new Commander(ctx, hexSize, initialBlueHex);
+        interactionManager.addPiece(commander);
     }
 
     if (initialTransponderHex) {
@@ -108,6 +110,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialBerserkerHex) {
         const berserker = new Berserker(ctx, hexSize, initialBerserkerHex);
         interactionManager.addPiece(berserker);
+    }
+
+    if (initialMysticHex) {
+        const mystic = new Mystic(ctx, hexSize, initialMysticHex);
+        interactionManager.addPiece(mystic);
     }
 
     // Animation loop
