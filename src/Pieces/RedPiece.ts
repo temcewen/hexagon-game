@@ -1,7 +1,7 @@
 import { GridHexagon } from '../types.js';
 import { Piece } from '../Piece.js';
 import { BluePiece } from './BluePiece.js';
-import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
+import { PopupMenu } from '../PopupMenu.js';
 
 export class RedPiece extends Piece {
     private readonly _isMovable: boolean;

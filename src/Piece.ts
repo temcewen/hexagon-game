@@ -209,6 +209,91 @@ export abstract class Piece {
         return Array.from(finalValidMoves).map(keyToCoord);
     }
 
+    protected getPossibleMovesAnyDirection(availableDistance: number): HexCoord[] {
+        // Initialize a set to store unique valid moves
+        const validMovesSet = new Set<string>();
+
+        // Helper function to convert HexCoord to string key for the set
+        const coordToKey = (coord: HexCoord): string => `${coord.q},${coord.r},${coord.s}`;
+
+        // Helper function to convert string key back to HexCoord
+        const keyToCoord = (key: string): HexCoord => {
+            const [q, r, s] = key.split(',').map(Number);
+            return { q, r, s };
+        };
+
+        // Get valid board coordinates from InteractionManager
+        const validBoardHexes = Piece.interactionManager.getAllGridHexagons();
+
+        // Queue for BFS: [position, remaining moves]
+        type QueueItem = { pos: HexCoord; remainingMoves: number };
+        const queue: QueueItem[] = [{ 
+            pos: { q: this.q, r: this.r, s: this.s }, 
+            remainingMoves: availableDistance 
+        }];
+        
+        // Add starting position
+        validMovesSet.add(coordToKey({ q: this.q, r: this.r, s: this.s }));
+
+        while (queue.length > 0) {
+            const { pos, remainingMoves } = queue.shift()!;
+            
+            // If no moves left, skip processing this position
+            if (remainingMoves <= 0) continue;
+
+            // Try each direction from current position
+            for (const dir of HexUtils.DIRECTIONS) {
+                const nextMove = {
+                    q: pos.q + dir.q,
+                    r: pos.r + dir.r,
+                    s: pos.s + dir.s
+                };
+
+                const moveKey = coordToKey(nextMove);
+                
+                // Skip if we've already processed this position
+                if (validMovesSet.has(moveKey)) continue;
+
+                // Check if move is on the valid board grid
+                const isValidBoardPosition = validBoardHexes.some((hex: GridHexagon) => 
+                    hex.q === nextMove.q && hex.r === nextMove.r && hex.s === nextMove.s
+                );
+                if (!isValidBoardPosition) continue;
+
+                // Check if position is blocked
+                if (Piece.interactionManager.isPositionBlocked(this, nextMove)) continue;
+
+                // Add valid move to set
+                validMovesSet.add(moveKey);
+
+                // Add to queue with one less remaining move
+                queue.push({ pos: nextMove, remainingMoves: remainingMoves - 1 });
+            }
+        }
+
+        const finalValidMoves = new Set<string>();
+
+        // Process valid moves and beacon paths
+        for (const moveKey of validMovesSet) {
+            const move = keyToCoord(moveKey);
+            finalValidMoves.add(moveKey);
+
+            // Process beacon paths if a beacon exists at this position
+            const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
+            
+            // Add each unblocked beacon path coordinate
+            beaconPaths.forEach((pathBeacon) => {
+                const pathKey = coordToKey(pathBeacon);
+                if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon)) {
+                    finalValidMoves.add(pathKey);
+                }
+            });
+        }
+
+        // Convert the final set back to an array of HexCoords
+        return Array.from(finalValidMoves).map(keyToCoord);
+    }
+
     // Optional method for handling click interactions
     public handleClick(mousePos: { x: number, y: number }): void {
         // Base implementation does nothing
