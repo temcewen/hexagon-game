@@ -3,7 +3,7 @@ import { Point } from './Piece.js';
 export interface PopupMenuItem {
     text?: string;
     imageUrl?: string;
-    callback: () => void;
+    callback?: () => void;
     disabled?: boolean;
     disabledReason?: string;
 }
@@ -25,6 +25,7 @@ export class PopupMenu {
     private currentPreviewElement: HTMLElement | null = null;
     private currentPreviewSpacing: number = 10; // Default spacing
     private currentMenuPosition: Point = { x: 0, y: 0 }; // Store the requested position
+    private closePromiseResolve: ((value: number | PromiseLike<number>) => void) | null = null;
 
     private constructor() {
         // Create modal overlay
@@ -137,7 +138,12 @@ export class PopupMenu {
         }
     }
 
-    public show(position: Point, items: PopupMenuItem[], options: PopupMenuOptions = {}): void {
+    public show(position: Point, items: PopupMenuItem[], options: PopupMenuOptions = {}): Promise<number> {
+        // Create a new promise that will resolve when the popup is closed with the selected index
+        const closePromise = new Promise<number>((resolve) => {
+            this.closePromiseResolve = resolve;
+        });
+
         this.currentMenuPosition = position; // Store the requested position
         this.items = items;
         this.element.innerHTML = ''; // Clear previous items
@@ -209,9 +215,9 @@ export class PopupMenu {
                     window.alert(item.disabledReason);
                     return;
                 }
-                item.callback();
+                item.callback?.();
                 if (!this.forceKeepOpen) {
-                    this.hide();
+                    this.hide(index);
                 }
             });
 
@@ -222,9 +228,11 @@ export class PopupMenu {
         this.element.style.display = 'block';
         this.isVisible = true;
         this.positionMenuAndPreview(this.currentMenuPosition); // Position after adding items and making visible
+
+        return closePromise;
     }
 
-    public hide(): void {
+    public hide(selectedIndex: number = -1): void {
         this.element.style.display = 'none';
         this.modalOverlay.style.display = 'none';
         // Remove preview element from DOM
@@ -234,6 +242,12 @@ export class PopupMenu {
         this.currentPreviewElement = null;
         this.isVisible = false;
         this.forceKeepOpen = false;
+
+        // Resolve the close promise if it exists
+        if (this.closePromiseResolve) {
+            this.closePromiseResolve(selectedIndex);
+            this.closePromiseResolve = null;
+        }
     }
 
     public isMenuVisible(): boolean {

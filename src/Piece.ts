@@ -42,7 +42,7 @@ export abstract class Piece {
     }
 
     // Optional method for handling drop events
-    public onDropped?(fromPosition: { q: number, r: number, s: number }): void {
+    public onDropped?(fromPosition: { q: number, r: number, s: number }): void | Promise<void> {
         // Base implementation does nothing.
     }
 
@@ -89,6 +89,14 @@ export abstract class Piece {
     // Add this method after the moveTo method
     public getHexSize(): number {
         return this.hexSize;
+    }
+
+    public remove(): void {
+        if (!Piece.interactionManager) {
+            console.warn('InteractionManager not set - cannot remove piece');
+            return;
+        }
+        Piece.interactionManager.removePiece(this);
     }
 
     // Method to determine if a piece can move to specific coordinates

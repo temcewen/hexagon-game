@@ -38,7 +38,7 @@ export class Engineer extends Piece {
                 this.ctx.globalAlpha = 0.6;
             }
             
-            const imageSize = this.hexSize * 1.4; // Slightly larger than the hexagon
+            const imageSize = this.hexSize * 1.8; // Slightly larger than the hexagon
             this.ctx.drawImage(
                 this.image,
                 this.x - imageSize / 2,
@@ -123,19 +123,7 @@ export class Engineer extends Piece {
     }
 
     private removeBeacon(beacon: Beacon): void {
-        // Access the InteractionManager through the static property using type casting
-        const interactionManager = (Piece as any).interactionManager as InteractionManager;
-        if (interactionManager) {
-            // Remove the piece from the interaction manager's pieces array
-            const pieces = interactionManager['pieces'];
-            if (Array.isArray(pieces)) {
-                const index = pieces.indexOf(beacon);
-                if (index !== -1) {
-                    pieces.splice(index, 1);
-                    this.ctx.canvas.dispatchEvent(new Event('redraw'));
-                }
-            }
-        }
+        beacon.remove();
     }
 
     public handleClick(mousePos: Point): void {

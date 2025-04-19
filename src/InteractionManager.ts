@@ -88,11 +88,7 @@ export class InteractionManager {
         if (piece instanceof Transponder) {
             // Transponder-specific blocking rules
             return piecesAtPosition.some(p => 
-                p !== piece && // Don't block self
-                (p instanceof Mage ||
-                 p instanceof Transponder ||
-                 p instanceof BluePiece ||
-                 p instanceof RedPiece)
+                p !== piece && !(p instanceof Beacon)
             );
         }
         
@@ -396,5 +392,13 @@ export class InteractionManager {
                 piece.updateSize(newHexSize, sizeRatio);
             }
         });
+    }
+
+    public removePiece(piece: Piece): void {
+        const index = this.pieces.indexOf(piece);
+        if (index !== -1) {
+            this.pieces.splice(index, 1);
+            this.canvas.dispatchEvent(new Event('redraw'));
+        }
     }
 } 
