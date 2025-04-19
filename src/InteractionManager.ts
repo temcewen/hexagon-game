@@ -24,6 +24,16 @@ export class InteractionManager {
     private validMoveHexagons: HexCoord[] = [];
     private highlightBlinkTimer: number = 0;
     private readonly BLINK_SPEED_MS: number = 1000; // Blink cycle duration in ms
+    
+    // Variables for beacon path selection mode
+    private InBeaconSelectionMode: boolean = false;
+    private beaconPathHighlights: HexCoord[] = [];
+    private currentPieceInBeaconPath: Piece | null = null;
+    private beaconSelectionResolve: ((value: void) => void) | null = null;
+    private originalPiecePosition: {q: number, r: number, s: number, x: number, y: number} | null = null;
+    
+    // Tooltip element
+    private tooltipElement: HTMLDivElement | null = null;
 
     constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
         this.canvas = canvas;
@@ -41,6 +51,9 @@ export class InteractionManager {
         this.setupEventListeners();
         // Start the animation loop for blinking
         this.startBlinkTimer();
+        
+        // Create the tooltip element
+        this.createTooltipElement();
     }
 
     private startBlinkTimer(): void {
@@ -136,6 +149,12 @@ export class InteractionManager {
         this.mouseDownTime = Date.now();
         this.mouseDownPos = mousePos;
         
+        // If in beacon selection mode, only allow clicking on beacons in the path
+        if (this.InBeaconSelectionMode) {
+            this.handleBeaconSelection(mousePos);
+            return;
+        }
+        
         // Sort pieces by z-index in descending order to check top pieces first
         const sortedPieces = [...this.pieces].sort((a, b) => b.zIndex - a.zIndex);
         
@@ -157,6 +176,11 @@ export class InteractionManager {
     }
 
     private handleMouseMove(e: MouseEvent): void {
+        // If in beacon selection mode, ignore mouse movement
+        if (this.InBeaconSelectionMode) {
+            return;
+        }
+        
         if (!this.selectedPiece) return;
 
         const mousePos = this.getMousePos(e);
@@ -183,6 +207,11 @@ export class InteractionManager {
     }
 
     private handleMouseUp(e: MouseEvent): void {
+        // If in beacon selection mode, ignore mouse up except for beacon selection
+        if (this.InBeaconSelectionMode) {
+            return;
+        }
+        
         if (!this.selectedPiece) return;
 
         const mousePos = this.getMousePos(e);
@@ -288,6 +317,11 @@ export class InteractionManager {
     }
 
     private handleMouseLeave(): void {
+        // If in beacon selection mode, ignore mouse leave
+        if (this.InBeaconSelectionMode) {
+            return;
+        }
+        
         if (this.isDragging && this.selectedPiece) {
             // Return to starting position
             this.selectedPiece.x = this.dragStartPos.x;
@@ -325,6 +359,22 @@ export class InteractionManager {
         }
     }
 
+    // Helper method to draw highlights on specified hexagons
+    private drawHexagonHighlights(hexCoords: HexCoord[], highlightColor: string): void {
+        for (const hexCoord of hexCoords) {
+            // Find the corresponding grid hexagon to get the x,y coordinates
+            const hexagon = this.gridHexagons.find(h => h.q === hexCoord.q && h.r === hexCoord.r && h.s === hexCoord.s);
+            if (hexagon) {
+                this.drawHexagon(
+                    hexagon.x,
+                    hexagon.y,
+                    this.gridHexSize,
+                    highlightColor
+                );
+            }
+        }
+    }
+
     // Draw valid move highlights
     private drawValidMoveHighlights(): void {
         if (!this.isDragging || !this.selectedPiece || this.validMoveHexagons.length === 0) return;
@@ -338,18 +388,32 @@ export class InteractionManager {
         const highlightColor = `rgba(0, 255, 0, ${opacity})`;
         
         // Draw highlight for each valid move hexagon
-        for (const moveHex of this.validMoveHexagons) {
-            // Find the corresponding grid hexagon to get the x,y coordinates
-            const hexagon = this.gridHexagons.find(h => h.q === moveHex.q && h.r === moveHex.r && h.s === moveHex.s);
-            if (hexagon) {
-                this.drawHexagon(
-                    hexagon.x,
-                    hexagon.y,
-                    this.gridHexSize,
-                    highlightColor
-                );
-            }
-        }
+        this.drawHexagonHighlights(this.validMoveHexagons, highlightColor);
+    }
+
+    // Draw beacon path highlights when in beacon selection mode
+    private drawBeaconPathHighlights(): void {
+        if (!this.InBeaconSelectionMode || this.beaconPathHighlights.length === 0) return;
+        
+        // Calculate opacity based on time for pulsing effect
+        const now = Date.now();
+        const phase = (now % this.BLINK_SPEED_MS) / this.BLINK_SPEED_MS;
+        
+        // Pulsing cyan color for beacon path
+        const opacity = 0.5 + Math.sin(phase * Math.PI * 2) * 0.3;
+        const highlightColor = `rgba(0, 255, 255, ${opacity})`;
+        
+        // Draw highlight for each beacon in the path
+        this.drawHexagonHighlights(this.beaconPathHighlights, highlightColor);
+        
+        // Show instruction tooltip using HTML
+        this.ShowTooltip('Click on a beacon to move along the path. Press ESC to cancel.');
+    }
+    
+    // Create a tooltip with the given text
+    private CreateTooltip(text: string, y?: number, width?: number): void {
+        // Redirect to the new HTML tooltip method
+        this.ShowTooltip(text);
     }
 
     public draw(): void {
@@ -361,8 +425,19 @@ export class InteractionManager {
             piece.draw(piece === this.selectedPiece);
         });
 
-        // Draw valid move highlights last (on top of pieces)
+        // Draw valid move highlights when dragging
         this.drawValidMoveHighlights();
+        
+        // Draw beacon path highlights when in beacon selection mode
+        this.drawBeaconPathHighlights();
+        
+        // Show drag and drop tooltip when dragging
+        if (this.isDragging && this.selectedPiece) {
+            this.ShowTooltip('Drag to a valid highlighted position');
+        } else if (!this.InBeaconSelectionMode) {
+            // Hide tooltip when not in special modes
+            this.HideTooltip();
+        }
     }
 
     public updatePieceSizes(newHexSize: number, allHexagons: GridHexagon[]): void {
@@ -400,5 +475,231 @@ export class InteractionManager {
             this.pieces.splice(index, 1);
             this.canvas.dispatchEvent(new Event('redraw'));
         }
+    }
+    
+    // Method to force piece to move along a beacon path
+    public async ForceMoveAlongBeaconPath(piece: Piece, beacon: Beacon): Promise<void> {
+        if (this.InBeaconSelectionMode) {
+            console.warn('Already in beacon selection mode');
+            return;
+        }
+
+        // Find all beacons connected to this one using the beacon's method
+        const connectedBeacons = beacon.FindBeaconsInPath();
+
+        // If there's only one beacon and piece is already on it, do nothing
+        if (connectedBeacons.length === 1 && 
+            piece.q === beacon.q && 
+            piece.r === beacon.r && 
+            piece.s === beacon.s) {
+            return;
+        }
+
+        // Store the original position for cancellation
+        this.originalPiecePosition = {
+            q: piece.q,
+            r: piece.r,
+            s: piece.s,
+            x: piece.x,
+            y: piece.y
+        };
+        
+        // Store the beacon path for highlighting
+        this.beaconPathHighlights = connectedBeacons.map((b: any) => ({ q: b.q, r: b.r, s: b.s }));
+        this.currentPieceInBeaconPath = piece;
+        
+        // Enter beacon selection mode
+        this.InBeaconSelectionMode = true;
+        
+        // Force a redraw to show the highlights
+        this.draw();
+        
+        // Add ESC key listener for cancellation
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && this.InBeaconSelectionMode) {
+                this.CancelBeaconSelection();
+            }
+        };
+        
+        document.addEventListener('keydown', handleKeyDown);
+        
+        // Create a promise that will resolve when beacon selection is complete
+        return new Promise<void>((resolve) => {
+            this.beaconSelectionResolve = resolve;
+            
+            // When the promise resolves, clean up the event listener
+            const originalResolve = this.beaconSelectionResolve;
+            this.beaconSelectionResolve = () => {
+                document.removeEventListener('keydown', handleKeyDown);
+                // Hide the tooltip
+                this.HideTooltip();
+                if (originalResolve) originalResolve();
+            };
+            
+            // Set a timeout in case something goes wrong
+            setTimeout(() => {
+                if (this.InBeaconSelectionMode) {
+                    console.warn('Beacon selection mode timed out after 30 seconds');
+                    this.CancelBeaconSelection();
+                }
+            }, 30000);
+        });
+    }
+    
+    // Method to cancel beacon selection mode and return the piece to its original position
+    private CancelBeaconSelection(): void {
+        if (!this.InBeaconSelectionMode || !this.currentPieceInBeaconPath || !this.originalPiecePosition) return;
+        
+        // Move piece back to original position
+        const position = this.gridHexagons.find(h => 
+            h.q === this.originalPiecePosition!.q && 
+            h.r === this.originalPiecePosition!.r && 
+            h.s === this.originalPiecePosition!.s
+        );
+        
+        if (position) {
+            this.currentPieceInBeaconPath.moveTo(position);
+        }
+        
+        // End beacon selection mode
+        this.EndBeaconSelectionMode();
+    }
+    
+    // Method to end beacon selection mode
+    private EndBeaconSelectionMode(): void {
+        if (!this.InBeaconSelectionMode) return;
+        
+        this.InBeaconSelectionMode = false;
+        this.beaconPathHighlights = [];
+        this.currentPieceInBeaconPath = null;
+        this.originalPiecePosition = null;
+        
+        // Hide the tooltip
+        this.HideTooltip();
+        
+        // Resolve the promise if it exists
+        if (this.beaconSelectionResolve) {
+            this.beaconSelectionResolve();
+            this.beaconSelectionResolve = null;
+        }
+        
+        // Force a redraw
+        this.draw();
+    }
+
+    // Handle beacon selection from click
+    private handleBeaconSelection(mousePos: Point): void {
+        if (!this.InBeaconSelectionMode || !this.currentPieceInBeaconPath) return;
+        
+        // Check if click is on any beacon in the path
+        for (const beaconCoord of this.beaconPathHighlights) {
+            const gridHex = this.gridHexagons.find(h => 
+                h.q === beaconCoord.q && h.r === beaconCoord.r && h.s === beaconCoord.s
+            );
+            
+            if (gridHex) {
+                const dx = mousePos.x - gridHex.x;
+                const dy = mousePos.y - gridHex.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance <= this.gridHexSize * 1.2) {
+                    // Move the piece to this beacon
+                    this.currentPieceInBeaconPath.moveTo(gridHex);
+                    
+                    // End beacon selection mode
+                    this.EndBeaconSelectionMode();
+                    return;
+                }
+            }
+        }
+    }
+
+    // Create the HTML tooltip element
+    private createTooltipElement(): void {
+        // Check if tooltip already exists
+        if (this.tooltipElement) return;
+        
+        // Create tooltip element
+        this.tooltipElement = document.createElement('div');
+        this.tooltipElement.id = 'game-tooltip';
+        this.tooltipElement.style.cssText = `
+            position: absolute;
+            padding: 10px 15px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            text-align: center;
+            max-width: 400px;
+            display: none;
+            transform: translate(-50%, 0);
+            top: 20px;
+            left: 50%;
+        `;
+        
+        // Add it to the DOM, right after the canvas
+        if (this.canvas.parentNode) {
+            this.canvas.parentNode.appendChild(this.tooltipElement);
+        } else {
+            document.body.appendChild(this.tooltipElement);
+        }
+    }
+
+    // Show the HTML tooltip with the given text
+    private ShowTooltip(text: string, position?: {top?: number, left?: number}): void {
+        if (!this.tooltipElement) this.createTooltipElement();
+        if (!this.tooltipElement) return; // Safety check
+        
+        // Set the text
+        this.tooltipElement.textContent = text;
+        
+        // Position the tooltip if custom position provided
+        if (position) {
+            if (position.top !== undefined) {
+                this.tooltipElement.style.top = `${position.top}px`;
+            }
+            if (position.left !== undefined) {
+                this.tooltipElement.style.left = `${position.left}px`;
+            }
+        } else {
+            // Default position at top-center
+            this.tooltipElement.style.top = '20px';
+            this.tooltipElement.style.left = '50%';
+        }
+        
+        // Show the tooltip
+        this.tooltipElement.style.display = 'block';
+    }
+    
+    // Hide the HTML tooltip
+    private HideTooltip(): void {
+        if (this.tooltipElement) {
+            this.tooltipElement.style.display = 'none';
+        }
+    }
+    
+    // Cleanup on destruction
+    public cleanup(): void {
+        // Clear any intervals
+        if (this.highlightBlinkTimer) {
+            window.clearInterval(this.highlightBlinkTimer);
+        }
+        
+        // Remove the tooltip
+        if (this.tooltipElement && this.tooltipElement.parentNode) {
+            this.tooltipElement.parentNode.removeChild(this.tooltipElement);
+        }
+        
+        // Remove event listeners
+        this.canvas.removeEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.canvas.removeEventListener('mousemove', this.handleMouseMove.bind(this));
+        this.canvas.removeEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.removeEventListener('mouseleave', this.handleMouseLeave.bind(this));
     }
 } 

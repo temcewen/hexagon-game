@@ -306,4 +306,14 @@ export abstract class Piece {
     public handleClick(mousePos: { x: number, y: number }): void {
         // Base implementation does nothing
     }
+
+    // Method to force moving along a beacon path
+    public ForceMoveAlongBeaconPath(beacon: any): Promise<void> {
+        if (!Piece.interactionManager) {
+            console.warn('InteractionManager not set - cannot force move along beacon path');
+            return Promise.resolve();
+        }
+        // Pass the call to InteractionManager to avoid circular dependency
+        return Piece.interactionManager.ForceMoveAlongBeaconPath(this, beacon);
+    }
 } 

@@ -101,6 +101,7 @@ export class Mage extends Piece {
                 const piecesAtOriginalPos = this.getPiecesAtPosition(fromPosition.q, fromPosition.r, fromPosition.s);
                 const piecesAtNewPos = this.getPiecesAtPosition(this.q, this.r, this.s);
 
+                // Handle beacons sequentially
                 if (piecesAtNewPos.some(p => p instanceof Beacon)) {
                     await this.handleDroppedOnBeacon(this, piecesAtNewPos.find(p => p instanceof Beacon) as Beacon);
                 }
@@ -112,6 +113,15 @@ export class Mage extends Piece {
     }
 
     private async handleDroppedOnBeacon(piece: Piece, beacon: Beacon): Promise<void> {
+        // Check if there's only one beacon in path and piece is already on it
+        const connectedBeacons = beacon.FindBeaconsInPath();
+        if (connectedBeacons.length === 1 && 
+            piece.q === beacon.q && 
+            piece.r === beacon.r && 
+            piece.s === beacon.s) {
+            return;
+        }
+
         // Import the PopupMenu class
         const popupMenu = PopupMenu.getInstance();
         
@@ -134,108 +144,14 @@ export class Mage extends Piece {
         
         // Process based on selected option (0 = Move along path, 1 = Cancel, -1 = Closed without selection)
         if (selectedOption === 0) { // Move along beacon path
-            // Find all beacons connected to this one
-            const connectedBeacons = beacon.FindBeaconsInPath();
-            
-            // Create a special mode where the user must select a beacon
-            await new Promise<void>((resolve) => {
-                // Store original methods to restore later
-                const originalGetValidMoves = piece.getValidMoves;
-                const originalOnDropped = piece.onDropped;
-                const originalDraw = (piece as any).draw;
-                
-                // Flag to track if we're in beacon selection mode
-                let inBeaconSelectionMode = true;
-                
-                // Get reference to the context
-                const ctx = this.ctx;
-                
-                // Override the piece's draw method to highlight the beacons
-                (piece as any).draw = function(isSelected: boolean) {
-                    // Call the original draw method first
-                    originalDraw.call(piece, isSelected);
-                    
-                    // If in beacon selection mode, highlight the connected beacons
-                    if (inBeaconSelectionMode) {
-                        ctx.save();
-                        
-                        // Highlight effect for beacons
-                        const timestamp = Date.now();
-                        const alpha = 0.5 + 0.5 * Math.sin(timestamp / 300); // Pulsing effect
-                        
-                        ctx.globalAlpha = alpha;
-                        ctx.strokeStyle = '#00ffff';
-                        ctx.lineWidth = 4;
-                        
-                        // Draw highlight around each beacon in the path
-                        for (const beaconInPath of connectedBeacons) {
-                            ctx.beginPath();
-                            ctx.arc(beaconInPath.x, beaconInPath.y, piece.getHexSize() * 1.2, 0, Math.PI * 2);
-                            ctx.stroke();
-                        }
-                        
-                        ctx.restore();
-                    }
-                };
-                
-                // Override getValidMoves to only allow selection of beacons in the path
-                piece.getValidMoves = function() {
-                    return connectedBeacons.map(b => ({ q: b.q, r: b.r, s: b.s }));
-                };
-                
-                // Setup a special drop handler 
-                piece.onDropped = function(fromPosition: { q: number, r: number, s: number }) {
-                    // Check if we dropped on a beacon in the path
-                    const targetCoord = { q: piece.q, r: piece.r, s: piece.s };
-                    const isOnBeacon = connectedBeacons.some(b => 
-                        b.q === targetCoord.q && b.r === targetCoord.r && b.s === targetCoord.s
-                    );
-                    
-                    if (isOnBeacon) {
-                        // End the beacon selection mode
-                        inBeaconSelectionMode = false;
-                        
-                        // Restore original methods
-                        piece.getValidMoves = originalGetValidMoves;
-                        piece.onDropped = originalOnDropped;
-                        (piece as any).draw = originalDraw;
-                        
-                        // Resolve the promise, allowing execution to continue
-                        resolve();
-                    } else {
-                        // If not dropped on a beacon, return to starting position
-                        const allGridHexagons = piece.getValidMoves();
-                        const fromHex = allGridHexagons.find(h => 
-                            h.q === fromPosition.q && h.r === fromPosition.r && h.s === fromPosition.s
-                        );
-                        if (fromHex) {
-                            // Convert the HexCoord to GridHexagon with x,y coords
-                            const gridHex = this.getGridHexagons().find((gh: GridHexagon) => 
-                                gh.q === fromPosition.q && gh.r === fromPosition.r && gh.s === fromPosition.s
-                            );
-                            if (gridHex) {
-                                piece.moveTo(gridHex);
-                            }
-                        }
-                    }
-                }.bind(this);
-                
-                // Use an interval to force redraw and keep the beacon highlights visible
-                const redrawInterval = setInterval(() => {
-                    if (!inBeaconSelectionMode) {
-                        clearInterval(redrawInterval);
-                        return;
-                    }
-                    
-                    // Force a redraw - we'll redraw everything
-                    // This is a bit of a hack, but it's the simplest way to ensure the highlights are visible
-                    const gameCanvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
-                    if (gameCanvas) {
-                        const evt = new CustomEvent('forceRedraw');
-                        gameCanvas.dispatchEvent(evt);
-                    }
-                }, 50);
-            });
+            // Call the method from the base class that will handle the beacon path movement
+            await piece.ForceMoveAlongBeaconPath(beacon);
+            await delay(400);
         }
     }
+}
+
+
+function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }

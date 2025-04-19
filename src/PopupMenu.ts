@@ -3,7 +3,7 @@ import { Point } from './Piece.js';
 export interface PopupMenuItem {
     text?: string;
     imageUrl?: string;
-    callback?: () => void;
+    callback?: () => void | Promise<void>;
     disabled?: boolean;
     disabledReason?: string;
 }
@@ -53,11 +53,11 @@ export class PopupMenu {
         document.body.appendChild(this.element);
 
         // Close menu when clicking outside, unless forceKeepOpen is true
-        document.addEventListener('mousedown', (e) => {
+        document.addEventListener('mousedown', async (e) => {
             if (this.isVisible && !this.element.contains(e.target as Node) && !this.forceKeepOpen) {
                 // Also check if the click is on the preview element
                 if (!this.currentPreviewElement || !this.currentPreviewElement.contains(e.target as Node)) {
-                    this.hide();
+                    await this.hide();
                 }
             }
         });
@@ -205,7 +205,7 @@ export class PopupMenu {
             menuItem.appendChild(text);
 
             // Add click handler
-            menuItem.addEventListener('click', (event) => {
+            menuItem.addEventListener('click', async (event) => {
                 event.stopPropagation(); // Prevent triggering the outside click listener
                 if (item.disabled) {
                     if (!item.disabledReason || item.disabledReason.trim() === '') {
@@ -215,9 +215,13 @@ export class PopupMenu {
                     window.alert(item.disabledReason);
                     return;
                 }
-                item.callback?.();
-                if (!this.forceKeepOpen) {
-                    this.hide(index);
+                try {
+                    // Execute callback and wait if it's async
+                    await item.callback?.();
+                } finally {
+                    if (!this.forceKeepOpen) {
+                        await this.hide(index);
+                    }
                 }
             });
 
@@ -232,22 +236,35 @@ export class PopupMenu {
         return closePromise;
     }
 
-    public hide(selectedIndex: number = -1): void {
-        this.element.style.display = 'none';
-        this.modalOverlay.style.display = 'none';
-        // Remove preview element from DOM
-        if (this.currentPreviewElement && this.currentPreviewElement.parentNode) {
-            this.currentPreviewElement.parentNode.removeChild(this.currentPreviewElement);
-        }
-        this.currentPreviewElement = null;
-        this.isVisible = false;
-        this.forceKeepOpen = false;
+    public hide(selectedIndex: number = -1): Promise<void> {
+        return new Promise<void>((resolve) => {
+            // Set display to none
+            this.element.style.display = 'none';
+            this.modalOverlay.style.display = 'none';
+            
+            // Remove preview element from DOM
+            if (this.currentPreviewElement && this.currentPreviewElement.parentNode) {
+                this.currentPreviewElement.parentNode.removeChild(this.currentPreviewElement);
+            }
+            this.currentPreviewElement = null;
+            this.isVisible = false;
+            this.forceKeepOpen = false;
 
-        // Resolve the close promise if it exists
-        if (this.closePromiseResolve) {
-            this.closePromiseResolve(selectedIndex);
-            this.closePromiseResolve = null;
-        }
+            // Wait for next animation frame to ensure DOM updates are processed
+            requestAnimationFrame(() => {
+                // Double check in next frame that everything is actually hidden
+                if (this.element.style.display === 'none' && 
+                    this.modalOverlay.style.display === 'none' && 
+                    !this.currentPreviewElement) {
+                    // Resolve the close promise if it exists
+                    if (this.closePromiseResolve) {
+                        this.closePromiseResolve(selectedIndex);
+                        this.closePromiseResolve = null;
+                    }
+                    resolve();
+                }
+            });
+        });
     }
 
     public isMenuVisible(): boolean {

@@ -6,6 +6,7 @@ import { InteractionManager } from './InteractionManager.js';
 import { Piece } from './Piece.js';
 import { Mage } from './Pieces/Mage.js';
 import { Engineer } from './Pieces/Engineer.js';
+import { Berserker } from './Pieces/Berserker.js';
 
 // Wait for the DOM to load completely before accessing elements
 document.addEventListener('DOMContentLoaded', function() {
@@ -77,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialTransponderHex = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
     const initialMageHex = allHexagons.find(hex => hex.q === 0 && hex.r === 0);
     const initialEngineerHex = allHexagons.find(hex => hex.q === 2 && hex.r === 4);
+    const initialBerserkerHex = allHexagons.find(hex => hex.q === 3 && hex.r === 0);
 
     if (initialRedHex) {
         const redPiece = new RedPiece(ctx, hexSize, initialRedHex);
@@ -101,6 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialEngineerHex) {
         const engineer = new Engineer(ctx, hexSize, initialEngineerHex);
         interactionManager.addPiece(engineer);
+    }
+
+    if (initialBerserkerHex) {
+        const berserker = new Berserker(ctx, hexSize, initialBerserkerHex);
+        interactionManager.addPiece(berserker);
     }
 
     // Animation loop
