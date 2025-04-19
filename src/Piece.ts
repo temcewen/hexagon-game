@@ -1,5 +1,6 @@
 import { GridHexagon } from './types.js';
 import { InteractionManager } from './InteractionManager.js';
+import { HexUtils } from './utils/HexUtils.js';
 
 export interface Point {
     x: number;
@@ -52,6 +53,15 @@ export abstract class Piece {
             return [];
         }
         return Piece.interactionManager.getPiecesAtPosition(q, r, s);
+    }
+
+    // Get all grid hexagons
+    protected getGridHexagons(): GridHexagon[] {
+        if (!Piece.interactionManager) {
+            console.warn('InteractionManager not set - cannot get grid hexagons');
+            return [];
+        }
+        return Piece.interactionManager.getAllGridHexagons();
     }
 
     // Default stacking behavior - go on top
@@ -129,6 +139,74 @@ export abstract class Piece {
     // Method to determine if the piece can be moved
     public isMovable(): boolean {
         return true; // Default behavior: pieces are movable
+    }
+
+    protected getPossibleMovesByDirection(availableDistance: number): HexCoord[] {
+        // Initialize a set to store unique valid moves
+        const validMovesSet = new Set<string>();
+
+        // Helper function to convert HexCoord to string key for the set
+        const coordToKey = (coord: HexCoord): string => `${coord.q},${coord.r},${coord.s}`;
+
+        // Helper function to convert string key back to HexCoord
+        const keyToCoord = (key: string): HexCoord => {
+            const [q, r, s] = key.split(',').map(Number);
+            return { q, r, s };
+        };
+
+        // Add current position as a valid move
+        validMovesSet.add(coordToKey({ q: this.q, r: this.r, s: this.s }));
+
+        // Get valid board coordinates from InteractionManager
+        const validBoardHexes = Piece.interactionManager.getAllGridHexagons();
+
+        // Calculate potential moves in all six directions
+        for (const dir of HexUtils.DIRECTIONS) {
+            // Explore each direction until we hit a blocking piece or reach max distance
+            for (let distance = 1; distance <= availableDistance; distance++) {
+                const move = {
+                    q: this.q + (dir.q * distance),
+                    r: this.r + (dir.r * distance),
+                    s: this.s + (dir.s * distance)
+                };
+
+                // Check if move is on the valid board grid
+                const isValidBoardPosition = validBoardHexes.some((hex: GridHexagon) => 
+                    hex.q === move.q && hex.r === move.r && hex.s === move.s
+                );
+                if (!isValidBoardPosition) break; // Stop exploring this direction if we're off the board
+
+                // Check if position is blocked
+                if (Piece.interactionManager.isPositionBlocked(this, move)) {
+                    break; // Stop exploring this direction if we hit a blocking piece
+                }
+
+                // Add valid move to set
+                validMovesSet.add(coordToKey(move));
+            }
+        }
+
+        const finalValidMoves = new Set<string>();
+
+        // Process valid moves and beacon paths
+        for (const moveKey of validMovesSet) {
+            const move = keyToCoord(moveKey);
+            finalValidMoves.add(moveKey);
+
+            // Process beacon paths if a beacon exists at this position
+            const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
+            
+            // Add each unblocked beacon path coordinate
+            beaconPaths.forEach((pathBeacon) => {
+                const pathKey = coordToKey(pathBeacon);
+                if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon)) {
+                    finalValidMoves.add(pathKey);
+                }
+            });
+        }
+
+        // Convert the final set back to an array of HexCoords
+        return Array.from(finalValidMoves).map(keyToCoord);
     }
 
     // Optional method for handling click interactions

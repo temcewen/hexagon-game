@@ -5,6 +5,7 @@ import { BluePiece } from './Pieces/BluePiece.js';
 import { Transponder } from './Pieces/Transponder.js';
 import { InteractionType } from './InteractionType.js';
 import { Beacon } from './Pieces/Beacon.js';
+import { Mage } from './Pieces/Mage.js';
 
 export class InteractionManager {
     private canvas: HTMLCanvasElement;
@@ -15,6 +16,7 @@ export class InteractionManager {
     private dragOffset: Point;
     private dragStartPos: Point;
     private gridHexagons: GridHexagon[];
+    private gridHexSize: number;
     private mouseDownTime: number;
     private mouseDownPos: Point;
     private readonly CLICK_THRESHOLD_MS: number = 200; // Max time for a click
@@ -32,6 +34,7 @@ export class InteractionManager {
         this.dragOffset = { x: 0, y: 0 };
         this.dragStartPos = { x: 0, y: 0 };
         this.gridHexagons = [];
+        this.gridHexSize = 0;
         this.mouseDownTime = 0;
         this.mouseDownPos = { x: 0, y: 0 };
 
@@ -57,6 +60,13 @@ export class InteractionManager {
 
     public setGridHexagons(hexagons: GridHexagon[]): void {
         this.gridHexagons = hexagons;
+        if (hexagons.length >= 2) {
+            // Calculate grid hexagon size from the first two hexagons
+            this.gridHexSize = Math.sqrt(
+                Math.pow(hexagons[0].x - hexagons[1].x, 2) +
+                Math.pow(hexagons[0].y - hexagons[1].y, 2)
+            ) / Math.sqrt(3);
+        }
     }
 
     public getAllGridHexagons(): GridHexagon[] {
@@ -70,6 +80,38 @@ export class InteractionManager {
             piece.r === r &&
             piece.s === s
         ).sort((a, b) => a.zIndex - b.zIndex);
+    }
+
+    public isPositionBlocked(piece: Piece, position: HexCoord): boolean {
+        const piecesAtPosition = this.getPiecesAtPosition(position.q, position.r, position.s);
+        
+        if (piece instanceof Transponder) {
+            // Transponder-specific blocking rules
+            return piecesAtPosition.some(p => 
+                p !== piece && // Don't block self
+                (p instanceof Mage ||
+                 p instanceof Transponder ||
+                 p instanceof BluePiece ||
+                 p instanceof RedPiece)
+            );
+        }
+        
+        // Default behavior: only allow beacons to stack
+        return piecesAtPosition.some(p => 
+            p !== piece && // Don't block self
+            !(p instanceof Beacon) // Allow beacons in path
+        );
+    }
+
+    public getBeaconPathsFromPosition(position: HexCoord): HexCoord[] {
+        const piecesAtPosition = this.getPiecesAtPosition(position.q, position.r, position.s);
+        const beacon = piecesAtPosition.find(piece => piece instanceof Beacon) as Beacon | undefined;
+        
+        if (beacon) {
+            return beacon.FindBeaconsInPath();
+        }
+        
+        return [];
     }
 
     private setupEventListeners(): void {
@@ -295,8 +337,8 @@ export class InteractionManager {
         const now = Date.now();
         const phase = (now % this.BLINK_SPEED_MS) / this.BLINK_SPEED_MS;
         
-        // Opacity varies between 0.2 and 0.5 for a subtle pulsing effect
-        const opacity = 0.2 + Math.sin(phase * Math.PI * 2) * 0.15;
+        // Increased opacity range (0.3 to 0.7) for better visibility
+        const opacity = 0.3 + Math.sin(phase * Math.PI * 2) * 0.2;
         const highlightColor = `rgba(0, 255, 0, ${opacity})`;
         
         // Draw highlight for each valid move hexagon
@@ -305,9 +347,9 @@ export class InteractionManager {
             const hexagon = this.gridHexagons.find(h => h.q === moveHex.q && h.r === moveHex.r && h.s === moveHex.s);
             if (hexagon) {
                 this.drawHexagon(
-                    hexagon.x, 
-                    hexagon.y, 
-                    this.selectedPiece.getHexSize(), // Use the same size as the hexagon
+                    hexagon.x,
+                    hexagon.y,
+                    this.gridHexSize,
                     highlightColor
                 );
             }
@@ -315,9 +357,6 @@ export class InteractionManager {
     }
 
     public draw(): void {
-        // Draw valid move highlights first (under pieces)
-        this.drawValidMoveHighlights();
-        
         // Sort pieces by z-index
         const sortedPieces = [...this.pieces].sort((a, b) => a.zIndex - b.zIndex);
         
@@ -325,6 +364,9 @@ export class InteractionManager {
         sortedPieces.forEach(piece => {
             piece.draw(piece === this.selectedPiece);
         });
+
+        // Draw valid move highlights last (on top of pieces)
+        this.drawValidMoveHighlights();
     }
 
     public updatePieceSizes(newHexSize: number, allHexagons: GridHexagon[]): void {

@@ -3,9 +3,6 @@ import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
 import { GridHexagon } from '../types.js';
 import { InteractionManager } from '../InteractionManager.js';
-import { Mage } from './Mage.js';
-import { BluePiece } from './BluePiece.js';
-import { RedPiece } from './RedPiece.js';
 
 export enum BeaconType {
     TwoDirectional = '2D',
@@ -217,56 +214,6 @@ export class Transponder extends Piece {
     }
 
     public getValidMoves(): HexCoord[] {
-        const validMoves: HexCoord[] = [];
-        
-        // Add current position
-        validMoves.push({ q: this.q, r: this.r, s: this.s });
-
-        // The six directions in a hexagonal grid
-        const directions = [
-            { q: 1, r: 0, s: -1 },  // East
-            { q: 0, r: 1, s: -1 },  // Southeast
-            { q: -1, r: 1, s: 0 },  // Southwest
-            { q: -1, r: 0, s: 1 },  // West
-            { q: 0, r: -1, s: 1 },  // Northwest
-            { q: 1, r: -1, s: 0 }   // Northeast
-        ];
-
-        // Add moves in all six directions (up to 3 tiles)
-        for (const dir of directions) {
-            for (let i = 1; i <= 3; i++) {
-                validMoves.push({
-                    q: this.q + (dir.q * i),
-                    r: this.r + (dir.r * i),
-                    s: this.s + (dir.s * i)
-                });
-            }
-        }
-
-        // Get all grid hexagons from the parent class method
-        const allGridHexagons = super.getValidMoves();
-
-        // Filter moves to only those that exist on the grid and are not occupied by invalid piece types
-        return validMoves.filter(move => {
-            // First check if the move exists on the grid
-            const existsOnGrid = allGridHexagons.some(hex => 
-                hex.q === move.q && hex.r === move.r && hex.s === move.s
-            );
-
-            if (!existsOnGrid) {
-                return false;
-            }
-
-            // Check if the position is occupied by an invalid piece type
-            const piecesAtPosition = this.getPiecesAtPosition(move.q, move.r, move.s);
-            const hasInvalidPiece = piecesAtPosition.some(piece => 
-                piece instanceof Mage ||
-                piece instanceof Transponder ||
-                piece instanceof BluePiece ||
-                piece instanceof RedPiece
-            );
-
-            return !hasInvalidPiece;
-        });
+        return super.getPossibleMovesByDirection(3);
     }
 }

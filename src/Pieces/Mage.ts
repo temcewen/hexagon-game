@@ -3,6 +3,7 @@ import { GridHexagon } from '../types.js';
 import { Transponder } from './Transponder.js';
 import { BluePiece } from './BluePiece.js';
 import { RedPiece } from './RedPiece.js';
+import { Beacon } from './Beacon.js';
 
 export class Mage extends Piece {
     private image: HTMLImageElement;
@@ -32,7 +33,7 @@ export class Mage extends Piece {
 
         // Draw the image if loaded
         if (this.imageLoaded) {
-            const size = this.hexSize * 1.8; // Make the image slightly larger than the hex
+            const size = this.hexSize * 1.5; // Make the image slightly larger than the hex
             this.ctx.drawImage(
                 this.image,
                 this.x - size / 2,
@@ -60,7 +61,7 @@ export class Mage extends Piece {
             if (distance <= 6) {
                 // Check if there are any pieces at this position
                 const piecesAtPosition = this.getPiecesAtPosition(hex.q, hex.r, hex.s);
-                if (piecesAtPosition.length > 0) {
+                if (piecesAtPosition.some(p => p.isMovable())) {
                     validMoves.push({
                         q: hex.q,
                         r: hex.r,
@@ -79,22 +80,22 @@ export class Mage extends Piece {
         
         // Find a piece to swap with (if any)
         const pieceToSwap = piecesAtNewPosition.find(piece => 
-            piece instanceof Mage ||
-            piece instanceof Transponder ||
-            piece instanceof BluePiece ||
-            piece instanceof RedPiece
+            piece.isMovable()
         );
 
         // If we found a valid piece to swap with
         if (pieceToSwap) {
-            // Move the other piece to our original position
-            pieceToSwap.moveTo({
-                q: fromPosition.q,
-                r: fromPosition.r,
-                s: fromPosition.s,
-                x: 0, // These will be calculated by the game engine
-                y: 0
-            });
+            // Get the grid hexagon for the original position
+            const fromHexagon = this.getGridHexagons().find(hex => 
+                hex.q === fromPosition.q && 
+                hex.r === fromPosition.r && 
+                hex.s === fromPosition.s
+            );
+
+            if (fromHexagon) {
+                // Move the other piece to our original position with correct x,y coordinates
+                pieceToSwap.moveTo(fromHexagon);
+            }
         }
     }
 }

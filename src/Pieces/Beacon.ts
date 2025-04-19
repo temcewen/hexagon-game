@@ -1,5 +1,6 @@
-import { Piece } from '../Piece.js';
+import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../types.js';
+import { HexUtils } from '../utils/HexUtils.js';
 
 export class Beacon extends Piece {
     private image: HTMLImageElement;
@@ -47,5 +48,112 @@ export class Beacon extends Piece {
 
         // Restore the context state
         this.ctx.restore();
+    }
+
+    private normalizeRotation(degrees: number): number {
+        return ((degrees % 360) + 360) % 360;  // Ensures positive value between 0-359
+    }
+
+    private getDirectionFromDegrees(degrees: number): number {
+        // Convert degrees to closest 60-degree increment (0 = up, 60 = up-right, etc.)
+        const normalizedDegrees = this.normalizeRotation(degrees);
+        return Math.round(normalizedDegrees / 60) % 6;
+    }
+
+    private getValidDirections(): number[] {
+        const baseDirection = this.getDirectionFromDegrees(this.rotationDegrees);
+        
+        if (this.is3D) {
+            // For 3D beacons: opposite, left, and right of pointing direction
+            const oppositeDir = (baseDirection + 3) % 6;
+            const leftDir = (baseDirection + 2) % 6;
+            const rightDir = (baseDirection + 4) % 6;
+            return [oppositeDir, leftDir, rightDir];
+        } else {
+            // For 2D beacons: pointing direction and opposite direction
+            const oppositeDir = (baseDirection + 3) % 6;
+            return [baseDirection, oppositeDir];
+        }
+    }
+
+    private getNeighborCoordinates(direction: number): HexCoord {
+        return HexUtils.getCoordinateInDirection({
+            q: this.q,
+            r: this.r,
+            s: this.s,
+        }, direction);
+    }
+
+    private IsValidBeaconPathTile(coord: HexCoord, pieces: Piece[]): Boolean {
+        if (!super.canMoveTo(coord.q, coord.r, coord.s)) {
+            return false;
+        }
+        else if (pieces.length == 0 || (pieces.length == 1 && pieces[0] instanceof Beacon)) {
+            return true;
+        }
+        return false;
+    }
+
+    public FindBeaconsInPath(): Beacon[] {
+        const visited = new Set<string>();
+        const result: Beacon[] = [];
+        const queue: Beacon[] = [this];
+        
+        const positionKey = (q: number, r: number, s: number) => `${q},${r},${s}`;
+        visited.add(positionKey(this.q, this.r, this.s));
+
+        while (queue.length > 0) {
+            const currentBeacon = queue.shift()!;
+            result.push(currentBeacon);
+
+            const validDirections = currentBeacon.getValidDirections();
+
+            for (const direction of validDirections) {
+                var neighborCoord = currentBeacon.getNeighborCoordinates(direction);
+                var key = positionKey(neighborCoord.q, neighborCoord.r, neighborCoord.s);
+                
+                if (visited.has(key)) continue;
+
+                // Get pieces at the neighbor position
+                var piecesAtPosition = this.getPiecesAtPosition(
+                    neighborCoord.q,
+                    neighborCoord.r,
+                    neighborCoord.s
+                );
+
+                while (this.IsValidBeaconPathTile(neighborCoord, piecesAtPosition)) {
+
+                    if (visited.has(key)) {
+                        neighborCoord = HexUtils.getCoordinateInDirection(neighborCoord, direction);
+                        key = positionKey(neighborCoord.q, neighborCoord.r, neighborCoord.s);
+                        piecesAtPosition = this.getPiecesAtPosition(
+                            neighborCoord.q,
+                            neighborCoord.r,
+                            neighborCoord.s
+                        );
+                    }
+                    
+                    // Check if there's exactly one piece and it's a beacon
+                    if (piecesAtPosition.length === 1 && piecesAtPosition[0] instanceof Beacon) {
+                        const nextBeacon = piecesAtPosition[0] as Beacon;
+                        visited.add(key);
+                        queue.push(nextBeacon);
+                        break;
+                    }
+
+                    
+                    neighborCoord = HexUtils.getCoordinateInDirection(neighborCoord, direction);
+                    key = positionKey(neighborCoord.q, neighborCoord.r, neighborCoord.s);
+                    piecesAtPosition = this.getPiecesAtPosition(
+                        neighborCoord.q,
+                        neighborCoord.r,
+                        neighborCoord.s
+                    );
+                }
+
+            }
+        }
+
+        return result;
     }
 }
