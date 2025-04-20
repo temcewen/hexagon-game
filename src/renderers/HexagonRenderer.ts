@@ -78,14 +78,24 @@ export class HexagonRenderer {
         this.drawHexagonHighlights(validMoveHexagons, gridHexagons, gridHexSize, highlightColor);
     }
     
-    // Draw beacon path highlights
+    // Draw highlights for forced selection
+    public drawForcedSelectionHighlights(highlightedTiles: HexCoord[], gridHexagons: GridHexagon[],
+                                       gridHexSize: number, color: string): void {
+        if (highlightedTiles.length === 0) return;
+        
+        const highlightColor = this.getBlinkingColor(color, 0.5, 0.8);
+        
+        this.drawHexagonHighlights(highlightedTiles, gridHexagons, gridHexSize, highlightColor);
+    }
+
+    // Legacy method for backward compatibility
     public drawBeaconPathHighlights(beaconPathHighlights: HexCoord[], gridHexagons: GridHexagon[],
                                    gridHexSize: number): void {
-        if (beaconPathHighlights.length === 0) return;
-        
-        const baseColor = "rgba(0, 255, 255, 0.5)";
-        const highlightColor = this.getBlinkingColor(baseColor, 0.5, 0.8);
-        
-        this.drawHexagonHighlights(beaconPathHighlights, gridHexagons, gridHexSize, highlightColor);
+        this.drawForcedSelectionHighlights(
+            beaconPathHighlights, 
+            gridHexagons, 
+            gridHexSize,
+            "rgba(0, 255, 255, 0.5)"
+        );
     }
 } 

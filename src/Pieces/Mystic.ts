@@ -1,10 +1,13 @@
-import { Piece } from '../Piece.js';
+import { Piece, Point, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../types.js';
-import { HexCoord } from '../Piece.js';
+import { PopupMenu } from '../PopupMenu.js';
+import { ShadowPosition } from './ShadowPosition.js';
+import { InteractionManager } from '../InteractionManager.js';
 
 export class Mystic extends Piece {
     private image: HTMLImageElement;
     private imageLoaded: boolean = false;
+    private popupMenu: PopupMenu;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
         super(ctx, hexSize, position);
@@ -14,6 +17,19 @@ export class Mystic extends Piece {
         this.image.src = 'assets/eye.png';
         this.image.onload = () => {
             this.imageLoaded = true;
+        };
+
+        // Get popup menu instance
+        this.popupMenu = PopupMenu.getInstance();
+    }
+
+    private getCurrentPosition(): GridHexagon {
+        return {
+            x: this.x,
+            y: this.y,
+            q: this.q,
+            r: this.r,
+            s: this.s
         };
     }
 
@@ -42,5 +58,54 @@ export class Mystic extends Piece {
     public getValidMoves(): HexCoord[] {
         // Use getPossibleMovesAnyDirection with 2 moves
         return this.getPossibleMovesAnyDirection(2);
+    }
+
+    public handleClick(mousePos: Point): void {
+        // Convert canvas coordinates to screen coordinates
+        const canvas = this.ctx.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Calculate the scale between canvas logical pixels and CSS pixels
+        const scaleX = rect.width / (canvas.width / dpr);
+        const scaleY = rect.height / (canvas.height / dpr);
+        
+        // Convert to screen coordinates
+        const screenX = rect.left + mousePos.x * scaleX;
+        const screenY = rect.top + mousePos.y * scaleY;
+        const screenPosition = { x: screenX, y: screenY };
+
+        // Define menu items
+        const menuItems = [
+            {
+                text: "Self-Reflection",
+                callback: () => {
+                    // Create a new ShadowPosition at the current position
+                    const shadowPosition = new ShadowPosition(
+                        this.ctx,
+                        this.hexSize,
+                        this.getCurrentPosition()
+                    );
+                    // Add the shadow position to the game board through the interaction manager
+                    const interactionManager = (Piece as any).interactionManager as InteractionManager;
+                    if (interactionManager) {
+                        interactionManager.addPiece(shadowPosition);
+                        this.ctx.canvas.dispatchEvent(new Event('redraw'));
+                    } else {
+                        console.warn('InteractionManager not available - cannot add shadow position to board');
+                    }
+                    this.popupMenu.hide();
+                }
+            },
+            {
+                text: "Cancel",
+                callback: () => {
+                    this.popupMenu.hide();
+                }
+            }
+        ];
+
+        // Show the popup menu
+        this.popupMenu.show(screenPosition, menuItems);
     }
 }

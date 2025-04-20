@@ -20,6 +20,8 @@ export abstract class Piece {
         Piece.interactionManager = manager;
     }
 
+    public readonly id: string;
+
     public x: number;
     public y: number;
     public q: number;
@@ -39,6 +41,7 @@ export abstract class Piece {
         this.r = position.r;
         this.s = position.s;
         this.zIndex = 0;
+        this.id = crypto.randomUUID();
     }
 
     // Optional method for handling drop events

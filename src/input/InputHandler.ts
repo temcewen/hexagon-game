@@ -1,20 +1,24 @@
 import { Point } from '../Piece.js';
 import { DragDropManager } from '../managers/DragDropManager.js';
-import { BeaconPathManager } from '../managers/BeaconPathManager.js';
+import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
+import { HexGridManager } from '../managers/HexGridManager.js';
 
 export class InputHandler {
     private canvas: HTMLCanvasElement;
     private dragDropManager: DragDropManager;
-    private beaconPathManager: BeaconPathManager;
+    private forcedSelectionManager: ForcedSelectionManager;
+    private hexGridManager: HexGridManager;
     
     constructor(
         canvas: HTMLCanvasElement, 
         dragDropManager: DragDropManager,
-        beaconPathManager: BeaconPathManager
+        forcedSelectionManager: ForcedSelectionManager,
+        hexGridManager: HexGridManager
     ) {
         this.canvas = canvas;
         this.dragDropManager = dragDropManager;
-        this.beaconPathManager = beaconPathManager;
+        this.forcedSelectionManager = forcedSelectionManager;
+        this.hexGridManager = hexGridManager;
         
         this.setupEventListeners();
     }
@@ -26,38 +30,34 @@ export class InputHandler {
         this.canvas.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
     }
     
-    private getMousePos(evt: MouseEvent): Point {
+    private getMousePos(e: MouseEvent): Point {
         const rect = this.canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        
-        // Calculate the scale between CSS pixels and canvas logical pixels
-        const scaleX = (this.canvas.width / dpr) / rect.width;
-        const scaleY = (this.canvas.height / dpr) / rect.height;
-
         return {
-            x: (evt.clientX - rect.left) * scaleX,
-            y: (evt.clientY - rect.top) * scaleY
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
         };
     }
     
     private handleMouseDown(e: MouseEvent): void {
         const mousePos = this.getMousePos(e);
         
-        // If in beacon selection mode, delegate to beacon path manager
-        if (this.beaconPathManager.isInBeaconSelectionMode()) {
-            this.beaconPathManager.handleBeaconSelection(mousePos);
+        // If in forced selection mode, ignore mouse down
+        if (this.forcedSelectionManager.isInSelectionMode()) {
             return;
         }
         
         // Otherwise, delegate to drag drop manager
         this.dragDropManager.handleMouseDown(mousePos);
+        
+        // Trigger a redraw
+        this.canvas.dispatchEvent(new Event('redraw'));
     }
     
     private handleMouseMove(e: MouseEvent): void {
         const mousePos = this.getMousePos(e);
         
-        // If in beacon selection mode, ignore mouse movement
-        if (this.beaconPathManager.isInBeaconSelectionMode()) {
+        // If in forced selection mode, ignore mouse movement
+        if (this.forcedSelectionManager.isInSelectionMode()) {
             return;
         }
         
@@ -71,9 +71,11 @@ export class InputHandler {
     private handleMouseUp(e: MouseEvent): void {
         const mousePos = this.getMousePos(e);
         
-        // If in beacon selection mode, ignore mouse up except for beacon selection
-        if (this.beaconPathManager.isInBeaconSelectionMode()) {
-            this.beaconPathManager.handleBeaconSelection(mousePos);
+        // If in forced selection mode, handle selection
+        if (this.forcedSelectionManager.isInSelectionMode()) {
+            this.forcedSelectionManager.handleClick(mousePos, (point) => {
+                return this.hexGridManager.getHexCoordAtPoint(point);
+            });
             return;
         }
         
@@ -85,8 +87,8 @@ export class InputHandler {
     }
     
     private handleMouseLeave(): void {
-        // If in beacon selection mode, ignore mouse leave
-        if (this.beaconPathManager.isInBeaconSelectionMode()) {
+        // If in forced selection mode, ignore mouse leave
+        if (this.forcedSelectionManager.isInSelectionMode()) {
             return;
         }
         

@@ -2,10 +2,12 @@ import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../types.js';
 import { Beacon } from './Beacon.js';
 import { PopupMenu } from '../PopupMenu.js';
+import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 
 export class Mage extends Piece {
     private image: HTMLImageElement;
     private imageLoaded: boolean = false;
+    private forcedSelectionManager: ForcedSelectionManager;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
         super(ctx, hexSize, position);
@@ -16,6 +18,9 @@ export class Mage extends Piece {
         this.image.onload = () => {
             this.imageLoaded = true;
         };
+
+        // Get the ForcedSelectionManager instance
+        this.forcedSelectionManager = ForcedSelectionManager.getInstance();
     }
 
     public draw(isSelected: boolean): void {
@@ -109,36 +114,12 @@ export class Mage extends Piece {
             piece.s === beacon.s) {
             return;
         }
-
-        // Import the PopupMenu class
-        const popupMenu = PopupMenu.getInstance();
         
-        // Create menu options
-        const menuItems = [
-            {
-                text: "Move along beacon path",
-            },
-            {
-                text: "Cancel",
-            }
-        ];
-        
-        // Show the popup menu at the position of the beacon and get selected option index
-        const selectedOption = await popupMenu.show(
-            { x: beacon.x, y: beacon.y }, 
-            menuItems,
-            { modal: true }
-        );
-        
-        // Process based on selected option (0 = Move along path, 1 = Cancel, -1 = Closed without selection)
-        if (selectedOption === 0) { // Move along beacon path
-            // Call the method from the base class that will handle the beacon path movement
-            await piece.ForceMoveAlongBeaconPath(beacon);
-            await delay(400);
-        }
+        // Start forced selection mode
+        await piece.ForceMoveAlongBeaconPath(beacon);
+        await delay(200);
     }
 }
-
 
 function delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));

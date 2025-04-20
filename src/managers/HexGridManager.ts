@@ -1,5 +1,5 @@
 import { GridHexagon } from '../types.js';
-import { HexCoord } from '../Piece.js';
+import { HexCoord, Point } from '../Piece.js';
 import { Piece } from '../Piece.js';
 
 export class HexGridManager {
@@ -49,5 +49,36 @@ export class HexGridManager {
         return this.gridHexagons.find(h => 
             h.q === q && h.r === r && h.s === s
         );
+    }
+
+    public findHexagonAtPoint(point: Point): GridHexagon | null {
+        // Find the grid hexagon that contains this point
+        for (const hexagon of this.gridHexagons) {
+            const dx = point.x - hexagon.x;
+            const dy = point.y - hexagon.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if point is within the hexagon's radius
+            if (distance <= this.gridHexSize) {
+                return hexagon;
+            }
+        }
+        
+        return null;
+    }
+
+    public getHexCoordAtPoint(point: Point): HexCoord | null {
+        // Find the grid hexagon at this point
+        const hexagon = this.findHexagonAtPoint(point);
+        
+        if (hexagon) {
+            return {
+                q: hexagon.q,
+                r: hexagon.r,
+                s: hexagon.s
+            };
+        }
+        
+        return null;
     }
 } 
