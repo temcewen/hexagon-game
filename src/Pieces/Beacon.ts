@@ -1,5 +1,5 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { HexUtils } from '../utils/HexUtils.js';
 
 export class Beacon extends Piece {

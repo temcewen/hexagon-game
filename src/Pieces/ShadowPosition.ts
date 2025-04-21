@@ -1,5 +1,5 @@
 import { Piece } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 
 export class ShadowPosition extends Piece {
     private image: HTMLImageElement;

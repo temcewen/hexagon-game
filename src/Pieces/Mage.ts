@@ -1,11 +1,11 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { Beacon } from './Beacon.js';
-import { PopupMenu } from '../PopupMenu.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
+import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 
 export class Mage extends Piece {
-    private image: HTMLImageElement;
+    private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private forcedSelectionManager: ForcedSelectionManager;
 
@@ -16,6 +16,13 @@ export class Mage extends Piece {
         this.image = new Image();
         this.image.src = 'assets/wizard.png';
         this.image.onload = () => {
+            // Recolor the image to light red
+            this.image = ImageRecolorRenderer.recolor(
+                this.image as HTMLImageElement,
+                1.0,  // red - full brightness
+                0.6,  // green - reduced for reddish tint
+                1   // blue - reduced for reddish tint
+            );
             this.imageLoaded = true;
         };
 

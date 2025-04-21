@@ -1,5 +1,5 @@
 import { Piece, Point, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { PopupMenu } from '../PopupMenu.js';
 import { ShadowPosition } from './ShadowPosition.js';
 import { InteractionManager } from '../InteractionManager.js';
@@ -125,7 +125,6 @@ export class Mystic extends Piece {
                     const forcedSelectionManager = ForcedSelectionManager.getInstance();
                     
                     await forcedSelectionManager.startForcedSelection(
-                        this,
                         shadowPositions,
                         {
                             selectionMessage: "Select a shadow position to move to",

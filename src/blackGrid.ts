@@ -1,4 +1,4 @@
-import { GridHexagon } from './types.js';
+import { GridHexagon } from './Types.js';
 
 class BlackGrid {
     private canvas: HTMLCanvasElement;

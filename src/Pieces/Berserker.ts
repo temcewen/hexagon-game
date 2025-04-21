@@ -1,5 +1,5 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 
 export class Berserker extends Piece {
     private image: HTMLImageElement;

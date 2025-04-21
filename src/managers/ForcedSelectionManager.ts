@@ -17,7 +17,6 @@ export class ForcedSelectionManager {
     private currentOptions?: ForcedSelectionOptions;
     private tooltipManager: TooltipManager;
     private timeoutId?: number;
-    private piece?: Piece;
     private selectionResolve: ((value: void | PromiseLike<void>) => void) | null = null;
 
     private constructor(tooltipManager: TooltipManager) {
@@ -47,7 +46,6 @@ export class ForcedSelectionManager {
     }
 
     public async startForcedSelection(
-        piece: Piece,
         tiles: HexCoord[],
         options: ForcedSelectionOptions
     ): Promise<void> {
@@ -60,7 +58,6 @@ export class ForcedSelectionManager {
             this.inSelectionMode = true;
             this.highlightedTiles = tiles;
             this.currentOptions = options;
-            this.piece = piece;
 
             // Store resolve callback to be called when selection is made
             this.selectionResolve = resolve;
@@ -161,7 +158,6 @@ export class ForcedSelectionManager {
         this.inSelectionMode = false;
         this.highlightedTiles = [];
         this.currentOptions = undefined;
-        this.piece = undefined;
         this.tooltipManager.hideTooltip();
     }
 } 

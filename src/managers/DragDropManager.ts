@@ -1,5 +1,5 @@
 import { Point, Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { HexGridManager } from './HexGridManager.js';
 import { PieceManager } from './PieceManager.js';
 import { InteractionType } from '../InteractionType.js';

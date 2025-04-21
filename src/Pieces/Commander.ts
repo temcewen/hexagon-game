@@ -1,5 +1,5 @@
 import { Piece } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { HexCoord } from '../Piece.js';
 
 export class Commander extends Piece {

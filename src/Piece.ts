@@ -1,4 +1,4 @@
-import { GridHexagon } from './types.js';
+import { GridHexagon } from './Types.js';
 import { InteractionManager } from './InteractionManager.js';
 import { HexUtils } from './utils/HexUtils.js';
 

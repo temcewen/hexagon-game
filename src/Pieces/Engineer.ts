@@ -1,11 +1,11 @@
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { Piece, HexCoord, Point } from '../Piece.js';
 import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
-import { InteractionManager } from '../InteractionManager.js';
+import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 
 export class Engineer extends Piece {
-    private image: HTMLImageElement;
+    private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private popupMenu: PopupMenu;
 
@@ -16,6 +16,13 @@ export class Engineer extends Piece {
         this.image = new Image();
         this.image.src = 'assets/hard-hat.png';
         this.image.onload = () => {
+            // Recolor the image to blue
+            this.image = ImageRecolorRenderer.recolor(
+                this.image as HTMLImageElement,
+                0.55, // red
+                0.8,  // green
+                1.0   // blue
+            );
             this.imageLoaded = true;
         };
         
@@ -30,7 +37,6 @@ export class Engineer extends Piece {
     public draw(isSelected: boolean): void {
         // Draw the image if loaded
         if (this.imageLoaded) {
-            // Save current context state
             this.ctx.save();
             
             // Apply transparency if selected

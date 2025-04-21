@@ -1,5 +1,5 @@
 import { HexCoord } from '../Piece.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 
 export class HexagonRenderer {
     private ctx: CanvasRenderingContext2D;

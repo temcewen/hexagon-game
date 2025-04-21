@@ -1,6 +1,6 @@
-import { GridHexagon } from './types.js';
+import { GridHexagon } from './Types.js';
 import { Piece, HexCoord } from './Piece.js';
-import { Beacon } from './Pieces/Beacon.js';
+import { Beacon } from './pieces/Beacon.js';
 import { HexGridManager } from './managers/HexGridManager.js';
 import { TooltipManager } from './managers/TooltipManager.js';
 import { PieceManager } from './managers/PieceManager.js';
@@ -125,7 +125,6 @@ export class InteractionManager {
         }));
 
         return this.forcedSelectionManager.startForcedSelection(
-            piece,
             beaconCoords,
             {
                 selectionMessage: "Select a beacon to move to",

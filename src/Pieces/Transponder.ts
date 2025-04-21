@@ -1,7 +1,7 @@
 import { Piece, Point, HexCoord } from '../Piece.js';
 import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { InteractionManager } from '../InteractionManager.js';
 
 export enum BeaconType {

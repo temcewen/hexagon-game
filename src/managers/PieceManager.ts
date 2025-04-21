@@ -1,9 +1,9 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { Resource } from '../Pieces/Resource.js';
-import { Transponder } from '../Pieces/Transponder.js';
-import { Beacon } from '../Pieces/Beacon.js';
-import { GridHexagon } from '../types.js';
-import { ShadowPosition } from '../Pieces/ShadowPosition.js';
+import { Resource } from '../pieces/Resource.js';
+import { Transponder } from '../pieces/Transponder.js';
+import { Beacon } from '../pieces/Beacon.js';
+import { GridHexagon } from '../Types.js';
+import { ShadowPosition } from '../pieces/ShadowPosition.js';
 
 export class PieceManager {
     private pieces: Map<string, Piece> = new Map();

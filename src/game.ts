@@ -1,14 +1,14 @@
-import BlackGrid from './blackGrid.js';
-import { Resource } from './Pieces/Resource.js';
-import { Commander } from './Pieces/Commander.js';
-import { Transponder } from './Pieces/Transponder.js';
+import BlackGrid from './BlackGrid.js';
+import { Resource } from './pieces/Resource.js';
+import { Commander } from './pieces/Commander.js';
+import { Transponder } from './pieces/Transponder.js';
 import { InteractionManager } from './InteractionManager.js';
 import { Piece } from './Piece.js';
-import { Mage } from './Pieces/Mage.js';
-import { Engineer } from './Pieces/Engineer.js';
-import { Berserker } from './Pieces/Berserker.js';
-import { Mystic } from './Pieces/Mystic.js';
-import { ShadowPosition } from './Pieces/ShadowPosition.js';
+import { Mage } from './pieces/Mage.js';
+import { Engineer } from './pieces/Engineer.js';
+import { Berserker } from './pieces/Berserker.js';
+import { Mystic } from './pieces/Mystic.js';
+import { ShadowPosition } from './pieces/ShadowPosition.js';
 
 // Wait for the DOM to load completely before accessing elements
 document.addEventListener('DOMContentLoaded', function() {

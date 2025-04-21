@@ -1,4 +1,4 @@
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { Piece } from '../Piece.js';
 import { PopupMenu } from '../PopupMenu.js';
 

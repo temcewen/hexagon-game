@@ -1,4 +1,4 @@
-import { GridHexagon } from '../types.js';
+import { GridHexagon } from '../Types.js';
 import { HexCoord, Point } from '../Piece.js';
 import { Piece } from '../Piece.js';
 
