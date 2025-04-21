@@ -162,4 +162,8 @@ export class InteractionManager {
         this.tooltipManager.cleanup();
         this.inputHandler.cleanup();
     }
+
+    public getAllPieces(): Piece[] {
+        return this.pieceManager.getPieces();
+    }
 } 

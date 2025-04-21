@@ -82,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialEngineerHex = allHexagons.find(hex => hex.q === 2 && hex.r === 4);
     const initialBerserkerHex = allHexagons.find(hex => hex.q === 3 && hex.r === 0);
     const initialMysticHex = allHexagons.find(hex => hex.q === 1 && hex.r === -3);
-    const initialShadowHex = allHexagons.find(hex => hex.q === 1 && hex.r === -5);
 
     if (initialRedHex) {
         const redPiece = new Resource(ctx, hexSize, initialRedHex);
@@ -117,11 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialMysticHex) {
         const mystic = new Mystic(ctx, hexSize, initialMysticHex);
         interactionManager.addPiece(mystic);
-    }
-
-    if (initialShadowHex) {
-        const shadowPosition = new ShadowPosition(ctx, hexSize, initialShadowHex);
-        interactionManager.addPiece(shadowPosition);
     }
 
     // Animation loop

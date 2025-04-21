@@ -6,6 +6,7 @@ export class ShadowPosition extends Piece {
     private imageLoaded: boolean = false;
     private opacity: number = 0.25;
     private animationStartTime: number;
+    private animationFrameId: number | null = null;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
         super(ctx, hexSize, position);
@@ -15,10 +16,29 @@ export class ShadowPosition extends Piece {
         this.image.src = 'assets/eye.png';
         this.image.onload = () => {
             this.imageLoaded = true;
+            // Start animation when image is loaded
+            this.startAnimation();
         };
 
         // Initialize animation start time
         this.animationStartTime = performance.now();
+    }
+
+    private startAnimation(): void {
+        if (this.animationFrameId) return; // Don't start if already running
+        
+        const animate = () => {
+            this.ctx.canvas.dispatchEvent(new Event('redraw'));
+            this.animationFrameId = requestAnimationFrame(animate);
+        };
+        animate();
+    }
+
+    private stopAnimation(): void {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
     }
 
     public draw(isSelected: boolean): void {
@@ -37,12 +57,12 @@ export class ShadowPosition extends Piece {
                 this.y + this.hexSize * Math.sin(i * angle)
             );
         }
-        this.ctx.fillStyle = 'rgba(0, 0, 0, .5)';
+        this.ctx.fillStyle = isSelected ? 'rgba(74, 144, 226, 0.3)' : 'rgba(0, 0, 0, .5)';
         this.ctx.fill();
 
         // Calculate opacity using sine wave
         const elapsedTime = performance.now() - this.animationStartTime;
-        const frequency = 2 * Math.PI / 5000; // Complete cycle every 500ms
+        const frequency = 2 * Math.PI / 5000; // Complete cycle every 5000ms
         // Sine wave oscillates between -1 and 1, we transform it to oscillate between 0.25 and 0.5
         this.opacity = 0.375 + 0.125 * Math.sin(frequency * elapsedTime);
 
@@ -63,6 +83,11 @@ export class ShadowPosition extends Piece {
 
         // Restore the context state
         this.ctx.restore();
+    }
+
+    public remove(): void {
+        this.stopAnimation();
+        super.remove();
     }
 
     public isMovable(): boolean {
