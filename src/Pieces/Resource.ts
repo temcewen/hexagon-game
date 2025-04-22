@@ -6,8 +6,8 @@ export class Resource extends Piece {
     private readonly _isMovable: boolean;
     private popupMenu: PopupMenu;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
-        super(ctx, hexSize * 0.8, position); // Red pieces are 80% the size of grid hexagons
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+        super(ctx, hexSize * 0.8, position, playerId); // Resource pieces are 80% the size of grid hexagons
         this.popupMenu = PopupMenu.getInstance();
     }
 

@@ -9,6 +9,7 @@ import { InputHandler } from './input/InputHandler.js';
 import { HexagonRenderer } from './renderers/HexagonRenderer.js';
 import { BlinkManager } from './managers/BlinkManager.js';
 import { ForcedSelectionManager } from './managers/ForcedSelectionManager.js';
+import { PlayerManager } from './managers/PlayerManager.js';
 
 export class InteractionManager {
     private canvas: HTMLCanvasElement;
@@ -22,8 +23,9 @@ export class InteractionManager {
     private hexagonRenderer: HexagonRenderer;
     private blinkManager: BlinkManager;
     private inputHandler: InputHandler;
+    private playerManager: PlayerManager;
 
-    constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+    constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, hexSize: number) {
         this.canvas = canvas;
         
         // Initialize component managers
@@ -35,6 +37,7 @@ export class InteractionManager {
         // Initialize managers that depend on other managers
         this.dragDropManager = new DragDropManager(this.hexGridManager, this.pieceManager);
         this.forcedSelectionManager = ForcedSelectionManager.getInstance(this.tooltipManager);
+        this.playerManager = new PlayerManager(ctx, hexSize, this.pieceManager, this.hexGridManager);
         
         // Initialize input handler with all required managers
         this.inputHandler = new InputHandler(
@@ -58,6 +61,8 @@ export class InteractionManager {
 
     public setGridHexagons(hexagons: GridHexagon[]): void {
         this.hexGridManager.setGridHexagons(hexagons);
+        // Initialize game state when grid is set
+        this.playerManager.initializeGameState();
     }
 
     public getAllGridHexagons(): GridHexagon[] {

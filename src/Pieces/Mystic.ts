@@ -4,19 +4,31 @@ import { PopupMenu } from '../PopupMenu.js';
 import { ShadowPosition } from './ShadowPosition.js';
 import { InteractionManager } from '../InteractionManager.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
+import { PlayerManager } from '../managers/PlayerManager.js';
+import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 
 export class Mystic extends Piece {
-    private image: HTMLImageElement;
+    private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private popupMenu: PopupMenu;
+    private playerManager: PlayerManager;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
-        super(ctx, hexSize, position);
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+        super(ctx, hexSize, position, playerId);
+        
+        // Get the PlayerManager instance
+        this.playerManager = PlayerManager.getInstance();
         
         // Load the image
         this.image = new Image();
         this.image.src = 'assets/eye.png';
         this.image.onload = () => {
+            // Get the player's color and recolor the image
+            const playerColor = this.playerManager.getPlayerColor(playerId);
+            this.image = ImageRecolorRenderer.recolorWithPlayerColor(
+                this.image as HTMLImageElement,
+                playerColor
+            );
             this.imageLoaded = true;
         };
 
@@ -104,7 +116,8 @@ export class Mystic extends Piece {
                     const shadowPosition = new ShadowPosition(
                         this.ctx,
                         this.hexSize,
-                        this.getCurrentPosition()
+                        this.getCurrentPosition(),
+                        this.playerId
                     );
                     // Add the shadow position to the game board through the interaction manager
                     const interactionManager = (Piece as any).interactionManager as InteractionManager;

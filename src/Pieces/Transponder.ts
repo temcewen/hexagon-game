@@ -3,6 +3,8 @@ import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
 import { GridHexagon } from '../Types.js';
 import { InteractionManager } from '../InteractionManager.js';
+import { PlayerManager } from '../managers/PlayerManager.js';
+import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 
 export enum BeaconType {
     TwoDirectional = '2D',
@@ -10,21 +12,31 @@ export enum BeaconType {
 }
 
 export class Transponder extends Piece {
-    private image: HTMLImageElement;
+    private image: HTMLImageElement | HTMLCanvasElement;
     private beacon2DImage: HTMLImageElement;
     private beacon3DImage: HTMLImageElement;
     private imageLoaded: boolean = false;
     private beaconRotationDegrees: number = 0;
     private currentBeaconType: BeaconType | null = null;
     private popupMenu: PopupMenu;
+    private playerManager: PlayerManager;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: any) {
-        super(ctx, hexSize, position);
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+        super(ctx, hexSize, position, playerId);
+        
+        // Get the PlayerManager instance
+        this.playerManager = PlayerManager.getInstance();
         
         // Load the robot image
         this.image = new Image();
         this.image.src = 'assets/transponder.png';
         this.image.onload = () => {
+            // Get the player's color and recolor the image
+            const playerColor = this.playerManager.getPlayerColor(playerId);
+            this.image = ImageRecolorRenderer.recolorWithPlayerColor(
+                this.image as HTMLImageElement,
+                playerColor
+            );
             this.imageLoaded = true;
         };
 
@@ -131,7 +143,8 @@ export class Transponder extends Piece {
                         this.hexSize, 
                         this.getCurrentPosition(),
                         this.beaconRotationDegrees,
-                        this.currentBeaconType === BeaconType.ThreeDirectional
+                        this.currentBeaconType === BeaconType.ThreeDirectional,
+                        this.playerId
                     );
                     // Add the beacon to the game board through the interaction manager
                     this.addBeaconToBoard(beacon);

@@ -67,56 +67,12 @@ document.addEventListener('DOMContentLoaded', function() {
     blackGrid.createGrid();
     const allHexagons = blackGrid.getHexagons();
     
-    // Create drag and drop manager
-    const interactionManager = new InteractionManager(canvas, ctx);
+    // Create interaction manager
+    const interactionManager = new InteractionManager(canvas, ctx, hexSize);
     interactionManager.setGridHexagons(allHexagons);
 
     // Set up the interaction manager reference in Piece class
     Piece.setInteractionManager(interactionManager);
-
-    // Find specific hexagons for initial piece placement
-    const initialRedHex = allHexagons.find(hex => hex.q === -6 && hex.r === 0);
-    const initialBlueHex = allHexagons.find(hex => hex.q === 6 && hex.r === 0);
-    const initialTransponderHex = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
-    const initialMageHex = allHexagons.find(hex => hex.q === 0 && hex.r === 0);
-    const initialEngineerHex = allHexagons.find(hex => hex.q === 2 && hex.r === 4);
-    const initialBerserkerHex = allHexagons.find(hex => hex.q === 3 && hex.r === 0);
-    const initialMysticHex = allHexagons.find(hex => hex.q === 1 && hex.r === -3);
-
-    if (initialRedHex) {
-        const redPiece = new Resource(ctx, hexSize, initialRedHex);
-        interactionManager.addPiece(redPiece);
-    }
-
-    if (initialBlueHex) {
-        const commander = new Commander(ctx, hexSize, initialBlueHex);
-        interactionManager.addPiece(commander);
-    }
-
-    if (initialTransponderHex) {
-        const transponder = new Transponder(ctx, hexSize, initialTransponderHex);
-        interactionManager.addPiece(transponder);
-    }
-
-    if (initialMageHex) {
-        const mage = new Mage(ctx, hexSize, initialMageHex);
-        interactionManager.addPiece(mage);
-    }
-
-    if (initialEngineerHex) {
-        const engineer = new Engineer(ctx, hexSize, initialEngineerHex);
-        interactionManager.addPiece(engineer);
-    }
-
-    if (initialBerserkerHex) {
-        const berserker = new Berserker(ctx, hexSize, initialBerserkerHex);
-        interactionManager.addPiece(berserker);
-    }
-
-    if (initialMysticHex) {
-        const mystic = new Mystic(ctx, hexSize, initialMysticHex);
-        interactionManager.addPiece(mystic);
-    }
 
     // Animation loop
     function animate(): void {

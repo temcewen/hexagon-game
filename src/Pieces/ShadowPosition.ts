@@ -8,8 +8,8 @@ export class ShadowPosition extends Piece {
     private animationStartTime: number;
     private animationFrameId: number | null = null;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
-        super(ctx, hexSize, position);
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+        super(ctx, hexSize, position, playerId);
         
         // Load the image
         this.image = new Image();

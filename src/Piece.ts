@@ -21,6 +21,7 @@ export abstract class Piece {
     }
 
     public readonly id: string;
+    public readonly playerId: string;
 
     public x: number;
     public y: number;
@@ -32,7 +33,7 @@ export abstract class Piece {
     protected hexSize: number;
     protected ctx: CanvasRenderingContext2D;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
         this.ctx = ctx;
         this.hexSize = hexSize;
         this.x = position.x;
@@ -42,6 +43,7 @@ export abstract class Piece {
         this.s = position.s;
         this.zIndex = 0;
         this.id = crypto.randomUUID();
+        this.playerId = playerId;
     }
 
     // Optional method for handling drop events

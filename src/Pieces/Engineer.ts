@@ -3,25 +3,29 @@ import { Piece, HexCoord, Point } from '../Piece.js';
 import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
+import { PlayerManager } from '../managers/PlayerManager.js';
 
 export class Engineer extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private popupMenu: PopupMenu;
+    private playerManager: PlayerManager;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon) {
-        super(ctx, hexSize * 0.7, position); // Engineer is 70% the size of grid hexagons
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+        super(ctx, hexSize * 0.7, position, playerId); // Engineer is 70% the size of grid hexagons
+        
+        // Get the PlayerManager instance
+        this.playerManager = PlayerManager.getInstance();
         
         // Load the engineer image
         this.image = new Image();
         this.image.src = 'assets/hard-hat.png';
         this.image.onload = () => {
-            // Recolor the image to blue
-            this.image = ImageRecolorRenderer.recolor(
+            // Get the player's color and recolor the image
+            const playerColor = this.playerManager.getPlayerColor(playerId);
+            this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
-                0.55, // red
-                0.8,  // green
-                1.0   // blue
+                playerColor
             );
             this.imageLoaded = true;
         };

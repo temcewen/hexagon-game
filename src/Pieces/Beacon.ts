@@ -8,8 +8,8 @@ export class Beacon extends Piece {
     public is3D: boolean;
     private readonly SIZE_MULTIPLIER = 2.5;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, rotationDegrees: number = 0, is3D: boolean = false) {
-        super(ctx, hexSize, position);
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, rotationDegrees: number = 0, is3D: boolean = false, playerId: string) {
+        super(ctx, hexSize, position, playerId);
         this.image = new Image();
         this.image.src = is3D ? 'assets/beacon-3.png' : 'assets/beacon-2.png';
         this.rotationDegrees = rotationDegrees;

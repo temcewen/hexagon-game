@@ -1,5 +1,6 @@
-
 // TODO: possible optimization is to cache recolored images for reuse.
+import { PlayerColor } from '../managers/PlayerManager.js';
+
 export class ImageRecolorRenderer {
     /**
      * Recolors an image with the specified RGB multipliers
@@ -40,5 +41,43 @@ export class ImageRecolorRenderer {
         tempCtx.putImageData(imageData, 0, 0);
         
         return tempCanvas;
+    }
+
+    /**
+     * Recolors an image based on a player color
+     * @param image The source image to recolor
+     * @param playerColor The player color to apply
+     * @returns A canvas containing the recolored image
+     */
+    public static recolorWithPlayerColor(
+        image: HTMLImageElement,
+        playerColor: PlayerColor
+    ): HTMLCanvasElement {
+        const rgbValues = this.getPlayerColorRgbValues(playerColor);
+        return this.recolor(image, rgbValues.red, rgbValues.green, rgbValues.blue);
+    }
+
+    /**
+     * Converts a player color name to RGB values
+     * @param color The player color name
+     * @returns An object with red, green, and blue values (0-1)
+     */
+    public static getPlayerColorRgbValues(color: PlayerColor): { red: number, green: number, blue: number } {
+        switch (color) {
+            case 'lightblue':
+                return { red: 0.6, green: 0.8, blue: 1.0 };
+            case 'lightgreen':
+                return { red: 0.6, green: 1.0, blue: 0.6 };
+            case 'pink':
+                return { red: 1.0, green: 0.8, blue: 0.9 }; // Lighter pink
+            case 'purple':
+                return { red: 0.8, green: 0.6, blue: 1.0 };
+            case 'yellow':
+                return { red: 1.0, green: 1.0, blue: 0.6 };
+            case 'darkorange':
+                return { red: 1.0, green: 0.7, blue: 0.4 };
+            default:
+                return { red: 1.0, green: 1.0, blue: 1.0 }; // White as fallback
+        }
     }
 }
