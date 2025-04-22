@@ -1,20 +1,33 @@
 import { Piece } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
+import { PlayerManager } from '../managers/PlayerManager.js';
+import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 
 export class ShadowPosition extends Piece {
-    private image: HTMLImageElement;
+    private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private opacity: number = 0.25;
     private animationStartTime: number;
     private animationFrameId: number | null = null;
+    private playerManager: PlayerManager;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
         super(ctx, hexSize, position, playerId);
+        
+        // Get the PlayerManager instance
+        this.playerManager = PlayerManager.getInstance();
         
         // Load the image
         this.image = new Image();
         this.image.src = 'assets/eye.png';
         this.image.onload = () => {
+            // Get the player's color and recolor the image
+            const playerColor = this.playerManager.getPlayerColor(playerId);
+            this.image = ImageRecolorRenderer.recolorWithPlayerColor(
+                this.image as HTMLImageElement,
+                playerColor,
+                0.35 // Lower shading value for a darker appearance
+            );
             this.imageLoaded = true;
             // Start animation when image is loaded
             this.startAnimation();

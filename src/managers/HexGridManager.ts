@@ -5,8 +5,26 @@ import { Piece } from '../Piece.js';
 export class HexGridManager {
     private gridHexagons: GridHexagon[] = [];
     private gridHexSize: number = 0;
+    
+    // Singleton instance
+    private static instance: HexGridManager | null = null;
 
-    constructor() {}
+    // Private constructor to enforce singleton pattern
+    private constructor() {
+        if (HexGridManager.instance) {
+            throw new Error('HexGridManager instance already exists. Use getInstance() instead of creating a new instance.');
+        }
+    }
+    
+    /**
+     * Gets the singleton instance of HexGridManager
+     */
+    public static getInstance(): HexGridManager {
+        if (!HexGridManager.instance) {
+            HexGridManager.instance = new HexGridManager();
+        }
+        return HexGridManager.instance;
+    }
 
     public setGridHexagons(hexagons: GridHexagon[]): void {
         this.gridHexagons = hexagons;

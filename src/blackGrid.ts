@@ -99,7 +99,18 @@ class BlackGrid {
         this.hexWidth = newHexSize * 2;
         this.horizontalSpacing = 0.87 * this.hexWidth;
         this.verticalSpacing = 0.87 * this.hexHeight;
-        this.hexagons = []; // Clear existing hexagons, they will be recreated with createGrid()
+        this.updateHexagonPositions();
+    }
+
+    private updateHexagonPositions(): void {
+        const centerX = this.canvas.width / (window.devicePixelRatio || 1) / 2;
+        const centerY = this.canvas.height / (window.devicePixelRatio || 1) / 2;
+
+        // Update positions of existing hexagons
+        for (const hexagon of this.hexagons) {
+            hexagon.x = centerX + this.verticalSpacing * hexagon.q;
+            hexagon.y = centerY + this.horizontalSpacing * (-hexagon.r - hexagon.q/2);
+        }
     }
 
     public setShowCoordinates(show: boolean): void {

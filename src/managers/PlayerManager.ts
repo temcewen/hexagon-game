@@ -11,10 +11,9 @@ import { HexGridManager } from './HexGridManager.js';
 export type PlayerColor = 'lightblue' | 'lightgreen' | 'pink' | 'purple' | 'yellow' | 'darkorange';
 
 export class PlayerManager {
-    private pieceManager: PieceManager;
-    private hexGridManager: HexGridManager;
-    private ctx: CanvasRenderingContext2D;
-    private hexSize: number;
+    private initialized: boolean = false;
+    private ctx: CanvasRenderingContext2D | null = null;
+    private hexSize: number = 0;
     private readonly player1Id: string;
     private readonly player2Id: string;
     private clientPlayerId: string | null = null;
@@ -24,31 +23,32 @@ export class PlayerManager {
     // Singleton instance
     private static instance: PlayerManager | null = null;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, pieceManager: PieceManager, hexGridManager: HexGridManager) {
-        this.ctx = ctx;
-        this.hexSize = hexSize;
-        this.pieceManager = pieceManager;
-        this.hexGridManager = hexGridManager;
+    private constructor() {
+        if (PlayerManager.instance) {
+            throw new Error('PlayerManager instance already exists. Use getInstance() instead of creating a new instance.');
+        }
+        
         // Generate unique IDs for players
         this.player1Id = crypto.randomUUID();
         this.player2Id = crypto.randomUUID();
         
         // Assign random colors to players
         this.assignRandomColors();
-        
-        // Store instance for singleton pattern
-        PlayerManager.instance = this;
     }
     
     /**
      * Gets the singleton instance of PlayerManager
-     * @throws Error if getInstance is called before the manager is initialized
      */
     public static getInstance(): PlayerManager {
         if (!PlayerManager.instance) {
-            throw new Error('PlayerManager has not been initialized yet. Make sure it is created before calling getInstance.');
+            PlayerManager.instance = new PlayerManager();
         }
         return PlayerManager.instance;
+    }
+    
+    public initialize(ctx: CanvasRenderingContext2D, hexSize: number): void {
+        this.ctx = ctx;
+        this.hexSize = hexSize;
     }
 
     private assignRandomColors(): void {
@@ -62,53 +62,86 @@ export class PlayerManager {
         this.playerColors.set(this.player1Id, this.availableColors[0]);
         this.playerColors.set(this.player2Id, this.availableColors[1]);
     }
+    
+    private get pieceManager(): PieceManager {
+        return PieceManager.getInstance();
+    }
+    
+    private get hexGridManager(): HexGridManager {
+        return HexGridManager.getInstance();
+    }
 
     public async initializeGameState(): Promise<void> {
+        if (!this.ctx) {
+            throw new Error('PlayerManager has not been initialized with a context. Call initialize() first.');
+        }
+
+        if (this.initialized) {
+            return;
+        }
+        else {
+            this.initialized = true;
+        }
+        
         const allHexagons = this.hexGridManager.getAllGridHexagons();
         
-        // Find specific hexagons for initial piece placement
-        const initialResourceHex = allHexagons.find(hex => hex.q === -6 && hex.r === 0);
-        const initialBlueHex = allHexagons.find(hex => hex.q === 6 && hex.r === 0);
-        const initialTransponderHex = allHexagons.find(hex => hex.q === 0 && hex.r === -6);
-        const initialMageHex = allHexagons.find(hex => hex.q === 0 && hex.r === 0);
-        const initialEngineerHex = allHexagons.find(hex => hex.q === 2 && hex.r === 4);
-        const initialBerserkerHex = allHexagons.find(hex => hex.q === 3 && hex.r === 0);
-        const initialMysticHex = allHexagons.find(hex => hex.q === 1 && hex.r === -3);
+        // Player 1 pieces (top of board)
+        const player1Positions = {
+            resource: { q: -3, r: -4 },
+            commander: { q: -1, r: -4 },
+            transponder: { q: 1, r: -4 },
+            mage: { q: 3, r: -4 },
+            engineer: { q: -2, r: -3 },
+            berserker: { q: 0, r: -3 },
+            mystic: { q: 2, r: -3 }
+        };
 
-        if (initialResourceHex) {
-            const resourcePiece = new Resource(this.ctx, this.hexSize, initialResourceHex, this.player1Id);
-            this.pieceManager.addPiece(resourcePiece);
-        }
+        // Player 2 pieces (bottom of board)
+        const player2Positions = {
+            resource: { q: -3, r: 4 },
+            commander: { q: -1, r: 4 },
+            transponder: { q: 1, r: 4 },
+            mage: { q: 3, r: 4 },
+            engineer: { q: -2, r: 3 },
+            berserker: { q: 0, r: 3 },
+            mystic: { q: 2, r: 3 }
+        };
 
-        if (initialBlueHex) {
-            const commander = new Commander(this.ctx, this.hexSize, initialBlueHex, this.player2Id);
-            this.pieceManager.addPiece(commander);
-        }
+        // Create Player 1 pieces
+        const p1Resource = allHexagons.find(hex => hex.q === player1Positions.resource.q && hex.r === player1Positions.resource.r);
+        const p1Commander = allHexagons.find(hex => hex.q === player1Positions.commander.q && hex.r === player1Positions.commander.r);
+        const p1Transponder = allHexagons.find(hex => hex.q === player1Positions.transponder.q && hex.r === player1Positions.transponder.r);
+        const p1Mage = allHexagons.find(hex => hex.q === player1Positions.mage.q && hex.r === player1Positions.mage.r);
+        const p1Engineer = allHexagons.find(hex => hex.q === player1Positions.engineer.q && hex.r === player1Positions.engineer.r);
+        const p1Berserker = allHexagons.find(hex => hex.q === player1Positions.berserker.q && hex.r === player1Positions.berserker.r);
+        const p1Mystic = allHexagons.find(hex => hex.q === player1Positions.mystic.q && hex.r === player1Positions.mystic.r);
 
-        if (initialTransponderHex) {
-            const transponder = new Transponder(this.ctx, this.hexSize, initialTransponderHex, this.player1Id);
-            this.pieceManager.addPiece(transponder);
-        }
+        // Create Player 2 pieces
+        const p2Resource = allHexagons.find(hex => hex.q === player2Positions.resource.q && hex.r === player2Positions.resource.r);
+        const p2Commander = allHexagons.find(hex => hex.q === player2Positions.commander.q && hex.r === player2Positions.commander.r);
+        const p2Transponder = allHexagons.find(hex => hex.q === player2Positions.transponder.q && hex.r === player2Positions.transponder.r);
+        const p2Mage = allHexagons.find(hex => hex.q === player2Positions.mage.q && hex.r === player2Positions.mage.r);
+        const p2Engineer = allHexagons.find(hex => hex.q === player2Positions.engineer.q && hex.r === player2Positions.engineer.r);
+        const p2Berserker = allHexagons.find(hex => hex.q === player2Positions.berserker.q && hex.r === player2Positions.berserker.r);
+        const p2Mystic = allHexagons.find(hex => hex.q === player2Positions.mystic.q && hex.r === player2Positions.mystic.r);
 
-        if (initialMageHex) {
-            const mage = new Mage(this.ctx, this.hexSize, initialMageHex, this.player2Id);
-            this.pieceManager.addPiece(mage);
-        }
+        // Add Player 1 pieces
+        if (p1Resource) this.pieceManager.addPiece(new Resource(this.ctx, this.hexSize, p1Resource, this.player1Id));
+        if (p1Commander) this.pieceManager.addPiece(new Commander(this.ctx, this.hexSize, p1Commander, this.player1Id));
+        if (p1Transponder) this.pieceManager.addPiece(new Transponder(this.ctx, this.hexSize, p1Transponder, this.player1Id));
+        if (p1Mage) this.pieceManager.addPiece(new Mage(this.ctx, this.hexSize, p1Mage, this.player1Id));
+        if (p1Engineer) this.pieceManager.addPiece(new Engineer(this.ctx, this.hexSize, p1Engineer, this.player1Id));
+        if (p1Berserker) this.pieceManager.addPiece(new Berserker(this.ctx, this.hexSize, p1Berserker, this.player1Id));
+        if (p1Mystic) this.pieceManager.addPiece(new Mystic(this.ctx, this.hexSize, p1Mystic, this.player1Id));
 
-        if (initialEngineerHex) {
-            const engineer = new Engineer(this.ctx, this.hexSize, initialEngineerHex, this.player1Id);
-            this.pieceManager.addPiece(engineer);
-        }
-
-        if (initialBerserkerHex) {
-            const berserker = new Berserker(this.ctx, this.hexSize, initialBerserkerHex, this.player2Id);
-            this.pieceManager.addPiece(berserker);
-        }
-
-        if (initialMysticHex) {
-            const mystic = new Mystic(this.ctx, this.hexSize, initialMysticHex, this.player2Id);
-            this.pieceManager.addPiece(mystic);
-        }
+        // Add Player 2 pieces
+        if (p2Resource) this.pieceManager.addPiece(new Resource(this.ctx, this.hexSize, p2Resource, this.player2Id));
+        if (p2Commander) this.pieceManager.addPiece(new Commander(this.ctx, this.hexSize, p2Commander, this.player2Id));
+        if (p2Transponder) this.pieceManager.addPiece(new Transponder(this.ctx, this.hexSize, p2Transponder, this.player2Id));
+        if (p2Mage) this.pieceManager.addPiece(new Mage(this.ctx, this.hexSize, p2Mage, this.player2Id));
+        if (p2Engineer) this.pieceManager.addPiece(new Engineer(this.ctx, this.hexSize, p2Engineer, this.player2Id));
+        if (p2Berserker) this.pieceManager.addPiece(new Berserker(this.ctx, this.hexSize, p2Berserker, this.player2Id));
+        if (p2Mystic) this.pieceManager.addPiece(new Mystic(this.ctx, this.hexSize, p2Mystic, this.player2Id));
 
         // Determine the client player ID (randomly selecting player1 for now)
         // In a real game, this would come from auth/session/connection data

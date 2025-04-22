@@ -35,7 +35,8 @@ export class Transponder extends Piece {
             const playerColor = this.playerManager.getPlayerColor(playerId);
             this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
-                playerColor
+                playerColor,
+                .65
             );
             this.imageLoaded = true;
         };

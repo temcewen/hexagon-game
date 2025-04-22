@@ -4,6 +4,7 @@ import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
+import { PieceManager } from '../managers/PieceManager.js';
 
 export class Engineer extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
@@ -64,7 +65,7 @@ export class Engineer extends Piece {
 
     public getValidMoves(): HexCoord[] {
         // Engineer uses the any-direction movement with 2 moves
-        return this.getPossibleMovesAnyDirection(2);
+        return this.getPossibleMovesAnyDirection(2, true);
     }
 
     private hasBeaconAtCurrentPosition(): boolean {
@@ -75,6 +76,31 @@ export class Engineer extends Piece {
     private getBeaconAtCurrentPosition(): Beacon | null {
         const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
         return piecesAtPosition.find(piece => piece instanceof Beacon) as Beacon | null;
+    }
+
+    private hasEnemyBeaconAtCurrentPosition(): boolean {
+        const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
+        return piecesAtPosition.some(piece => 
+            piece instanceof Beacon && (piece as any).playerId !== this.playerId
+        );
+    }
+
+    private getEnemyBeaconAtCurrentPosition(): Beacon | null {
+        const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
+        return piecesAtPosition.find(piece => 
+            piece instanceof Beacon && (piece as any).playerId !== this.playerId
+        ) as Beacon | null;
+    }
+
+    private reverseEngineerBeacon(beacon: Beacon): void {
+        // Create a new beacon with the engineer's player ID
+        const newBeacon = beacon.changePlayerControl(this.playerId);
+        
+        // Remove the old beacon
+        beacon.remove();
+        
+        // Add the beacon through the PieceManager singleton
+        PieceManager.getInstance().addPiece(newBeacon);
     }
 
     private showBeaconRotationMenu(position: Point, beacon: Beacon): void {
@@ -154,6 +180,8 @@ export class Engineer extends Piece {
         // Check if there's a beacon at the current position
         const hasBeacon = this.hasBeaconAtCurrentPosition();
         const beacon = this.getBeaconAtCurrentPosition();
+        const hasEnemyBeacon = this.hasEnemyBeaconAtCurrentPosition();
+        const enemyBeacon = this.getEnemyBeaconAtCurrentPosition();
 
         // Define menu items with conditional disabling
         const menuItems: PopupMenuItem[] = [
@@ -177,6 +205,18 @@ export class Engineer extends Piece {
                 },
                 disabled: !hasBeacon,
                 disabledReason: "No beacon at this location to remove"
+            },
+            {
+                text: "Reverse Engineer",
+                callback: () => {
+                    if (enemyBeacon) {
+                        this.reverseEngineerBeacon(enemyBeacon);
+                        this.ctx.canvas.dispatchEvent(new Event('redraw'));
+                        this.popupMenu.hide();
+                    }
+                },
+                disabled: !hasEnemyBeacon,
+                disabledReason: "No enemy beacon at this location to reverse engineer"
             },
             {
                 text: "Cancel",

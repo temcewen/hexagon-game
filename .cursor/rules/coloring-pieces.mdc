@@ -1,0 +1,6 @@
+---
+description: Recoloring or coloring pieces.
+globs: 
+alwaysApply: false
+---
+When recoloring/coloring a piece, use the logic found in [ImageRecolorRenderer.ts](mdc:src/renderers/ImageRecolorRenderer.ts) and base it on the player id of the piece.

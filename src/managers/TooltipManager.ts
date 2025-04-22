@@ -1,16 +1,36 @@
 export class TooltipManager {
     private tooltipElement: HTMLDivElement | null = null;
-    private canvas: HTMLCanvasElement;
-
-    constructor(canvas: HTMLCanvasElement) {
+    private canvas: HTMLCanvasElement | null = null;
+    
+    // Singleton instance
+    private static instance: TooltipManager | null = null;
+    
+    // Private constructor to enforce singleton pattern
+    private constructor() {
+        if (TooltipManager.instance) {
+            throw new Error('TooltipManager instance already exists. Use getInstance() instead of creating a new instance.');
+        }
+    }
+    
+    /**
+     * Gets the singleton instance of TooltipManager
+     */
+    public static getInstance(): TooltipManager {
+        if (!TooltipManager.instance) {
+            TooltipManager.instance = new TooltipManager();
+        }
+        return TooltipManager.instance;
+    }
+    
+    public setCanvas(canvas: HTMLCanvasElement): void {
         this.canvas = canvas;
         this.createTooltipElement();
     }
 
     // Create the HTML tooltip element
     private createTooltipElement(): void {
-        // Check if tooltip already exists
-        if (this.tooltipElement) return;
+        // Check if tooltip already exists or canvas is not set
+        if (this.tooltipElement || !this.canvas) return;
         
         // Create tooltip element
         this.tooltipElement = document.createElement('div');

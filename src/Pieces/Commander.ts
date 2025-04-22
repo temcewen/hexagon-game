@@ -23,7 +23,8 @@ export class Commander extends Piece {
             const playerColor = this.playerManager.getPlayerColor(playerId);
             this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
-                playerColor
+                playerColor,
+                .35
             );
             this.imageLoaded = true;
         };

@@ -4,33 +4,36 @@ import { TooltipManager } from './TooltipManager.js';
 export interface ForcedSelectionOptions {
     selectionMessage: string;
     highlightColor: string;
-    onSelection: (selectedTile: HexCoord) => void | Promise<void>;
+    onSelection?: (selectedTile: HexCoord) => void | Promise<void>;
     onCancel?: () => void | Promise<void>;
     allowCancel?: boolean;
     timeout?: number;
 }
 
 export class ForcedSelectionManager {
-    private static instance: ForcedSelectionManager;
+    private static instance: ForcedSelectionManager | null = null;
     private inSelectionMode: boolean = false;
     private highlightedTiles: HexCoord[] = [];
     private currentOptions?: ForcedSelectionOptions;
-    private tooltipManager: TooltipManager;
+    private tooltipManager: TooltipManager | null = null;
     private timeoutId?: number;
-    private selectionResolve: ((value: void | PromiseLike<void>) => void) | null = null;
+    private selectionResolve: ((value: HexCoord | null | PromiseLike<HexCoord | null>) => void) | null = null;
 
-    private constructor(tooltipManager: TooltipManager) {
-        this.tooltipManager = tooltipManager;
+    private constructor() {
+        if (ForcedSelectionManager.instance) {
+            throw new Error('ForcedSelectionManager instance already exists. Use getInstance() instead of creating a new instance.');
+        }
     }
 
-    public static getInstance(tooltipManager?: TooltipManager): ForcedSelectionManager {
+    public static getInstance(): ForcedSelectionManager {
         if (!ForcedSelectionManager.instance) {
-            if (!tooltipManager) {
-                throw new Error('TooltipManager must be provided when creating ForcedSelectionManager instance');
-            }
-            ForcedSelectionManager.instance = new ForcedSelectionManager(tooltipManager);
+            ForcedSelectionManager.instance = new ForcedSelectionManager();
         }
         return ForcedSelectionManager.instance;
+    }
+    
+    public setTooltipManager(tooltipManager: TooltipManager): void {
+        this.tooltipManager = tooltipManager;
     }
 
     public isInSelectionMode(): boolean {
@@ -48,13 +51,17 @@ export class ForcedSelectionManager {
     public async startForcedSelection(
         tiles: HexCoord[],
         options: ForcedSelectionOptions
-    ): Promise<void> {
+    ): Promise<HexCoord | null> {
         if (this.inSelectionMode) {
             console.warn('Already in forced selection mode');
-            return;
+            return null;
+        }
+        
+        if (!this.tooltipManager) {
+            throw new Error('TooltipManager must be set before using ForcedSelectionManager');
         }
 
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<HexCoord | null>((resolve, reject) => {
             this.inSelectionMode = true;
             this.highlightedTiles = tiles;
             this.currentOptions = options;
@@ -63,7 +70,7 @@ export class ForcedSelectionManager {
             this.selectionResolve = resolve;
 
             // Show instruction tooltip
-            this.tooltipManager.showTooltip(
+            this.tooltipManager!.showTooltip(
                 options.allowCancel 
                     ? `${options.selectionMessage} (Press ESC to cancel)`
                     : options.selectionMessage
@@ -75,7 +82,7 @@ export class ForcedSelectionManager {
                     if (e.key === 'Escape' && this.inSelectionMode) {
                         this.cancelSelection();
                         document.removeEventListener('keydown', handleKeyDown);
-                        resolve(); // Resolve when cancelled
+                        resolve(null); // Resolve with null when cancelled
                     }
                 };
                 document.addEventListener('keydown', handleKeyDown);
@@ -87,7 +94,7 @@ export class ForcedSelectionManager {
                     console.warn('Forced selection timed out');
                     if (options.allowCancel) {
                         this.cancelSelection();
-                        resolve(); // Resolve when timed out
+                        resolve(null); // Resolve with null when timed out
                     }
                 }, options.timeout);
             }
@@ -121,13 +128,13 @@ export class ForcedSelectionManager {
         }
 
         // Execute selection callback
-        await this.currentOptions.onSelection(selectedTile);
+        await this.currentOptions.onSelection?.(selectedTile);
 
         this.endSelectionMode();
 
-        // Resolve the promise when selection is made
+        // Resolve the promise with the selected tile
         if (this.selectionResolve) {
-            this.selectionResolve();
+            this.selectionResolve(selectedTile);
             this.selectionResolve = null;
         }
     }
@@ -147,9 +154,9 @@ export class ForcedSelectionManager {
 
         this.endSelectionMode();
 
-        // Resolve the promise when selection is cancelled
+        // Resolve the promise with null when selection is cancelled
         if (this.selectionResolve) {
-            this.selectionResolve();
+            this.selectionResolve(null);
             this.selectionResolve = null;
         }
     }
@@ -158,6 +165,6 @@ export class ForcedSelectionManager {
         this.inSelectionMode = false;
         this.highlightedTiles = [];
         this.currentOptions = undefined;
-        this.tooltipManager.hideTooltip();
+        this.tooltipManager?.hideTooltip();
     }
 } 

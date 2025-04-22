@@ -1,6 +1,5 @@
 import { GridHexagon } from './Types.js';
 import { Piece, HexCoord } from './Piece.js';
-import { Beacon } from './pieces/Beacon.js';
 import { HexGridManager } from './managers/HexGridManager.js';
 import { TooltipManager } from './managers/TooltipManager.js';
 import { PieceManager } from './managers/PieceManager.js';
@@ -13,123 +12,145 @@ import { PlayerManager } from './managers/PlayerManager.js';
 
 export class InteractionManager {
     private canvas: HTMLCanvasElement;
-    
-    // Component managers
-    private hexGridManager: HexGridManager;
-    private tooltipManager: TooltipManager;
-    private pieceManager: PieceManager;
-    private dragDropManager: DragDropManager;
-    private forcedSelectionManager: ForcedSelectionManager;
     private hexagonRenderer: HexagonRenderer;
-    private blinkManager: BlinkManager;
     private inputHandler: InputHandler;
-    private playerManager: PlayerManager;
 
     constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, hexSize: number) {
         this.canvas = canvas;
         
-        // Initialize component managers
-        this.hexGridManager = new HexGridManager();
-        this.tooltipManager = new TooltipManager(canvas);
-        this.pieceManager = new PieceManager();
+        // Initialize renderers
         this.hexagonRenderer = new HexagonRenderer(ctx);
         
-        // Initialize managers that depend on other managers
-        this.dragDropManager = new DragDropManager(this.hexGridManager, this.pieceManager);
-        this.forcedSelectionManager = ForcedSelectionManager.getInstance(this.tooltipManager);
-        this.playerManager = new PlayerManager(ctx, hexSize, this.pieceManager, this.hexGridManager);
+        // Initialize managers
+        const hexGridManager = HexGridManager.getInstance();
+        const tooltipManager = TooltipManager.getInstance();
+        tooltipManager.setCanvas(canvas);
+        const pieceManager = PieceManager.getInstance();
+        const dragDropManager = DragDropManager.getInstance();
+        const forcedSelectionManager = ForcedSelectionManager.getInstance();
+        forcedSelectionManager.setTooltipManager(tooltipManager);
+        const playerManager = PlayerManager.getInstance();
+        playerManager.initialize(ctx, hexSize);
         
-        // Initialize input handler with all required managers
-        this.inputHandler = new InputHandler(
-            canvas, 
-            this.dragDropManager,
-            this.forcedSelectionManager,
-            this.hexGridManager
-        );
+        // Initialize input handler with required managers
+        this.inputHandler = new InputHandler(canvas);
         
         // Initialize blink manager with redraw callback
-        this.blinkManager = new BlinkManager(() => {
-            if (this.dragDropManager.getIsDragging() && this.dragDropManager.getSelectedPiece()) {
+        const blinkManager = BlinkManager.getInstance();
+        blinkManager.setCallback(() => {
+            if (dragDropManager.getIsDragging() && dragDropManager.getSelectedPiece()) {
                 this.draw();
             }
         });
     }
 
     public addPiece(piece: Piece): void {
-        this.pieceManager.addPiece(piece);
+        PieceManager.getInstance().addPiece(piece);
     }
 
     public setGridHexagons(hexagons: GridHexagon[]): void {
-        this.hexGridManager.setGridHexagons(hexagons);
+        HexGridManager.getInstance().setGridHexagons(hexagons);
         // Initialize game state when grid is set
-        this.playerManager.initializeGameState();
+        PlayerManager.getInstance().initializeGameState();
     }
 
     public getAllGridHexagons(): GridHexagon[] {
-        return this.hexGridManager.getAllGridHexagons();
+        return HexGridManager.getInstance().getAllGridHexagons();
     }
 
     public getPiecesAtPosition(q: number, r: number, s: number): Piece[] {
-        return this.pieceManager.getPiecesAtPosition(q, r, s);
+        return PieceManager.getInstance().getPiecesAtPosition(q, r, s);
     }
 
-    public isPositionBlocked(piece: Piece, position: HexCoord): boolean {
-        return this.pieceManager.isPositionBlocked(piece, position);
+    public isPositionBlocked(
+        piece: Piece, 
+        position: HexCoord, 
+        allowEnemyBeacons: boolean,
+        canMoveIntoEnemyPieces: boolean = false,
+        canMoveIntoFriendlyPieces: boolean = false
+    ): boolean {
+        return PieceManager.getInstance().isPositionBlocked(
+            piece, 
+            position, 
+            allowEnemyBeacons,
+            canMoveIntoEnemyPieces,
+            canMoveIntoFriendlyPieces
+        );
     }
 
     public getBeaconPathsFromPosition(position: HexCoord): HexCoord[] {
-        return this.pieceManager.getBeaconPathsFromPosition(position);
+        return PieceManager.getInstance().getBeaconPathsFromPosition(position);
     }
 
     public draw(): void {
+        const pieceManager = PieceManager.getInstance();
+        const dragDropManager = DragDropManager.getInstance();
+        const forcedSelectionManager = ForcedSelectionManager.getInstance();
+        const tooltipManager = TooltipManager.getInstance();
+        const hexGridManager = HexGridManager.getInstance();
+        
         // Draw all pieces
-        this.pieceManager.drawPieces(this.dragDropManager.getSelectedPiece());
+        pieceManager.drawPieces(dragDropManager.getSelectedPiece());
         
         // Draw valid move highlights when dragging
-        if (this.dragDropManager.getIsDragging() && this.dragDropManager.getSelectedPiece()) {
+        if (dragDropManager.getIsDragging() && dragDropManager.getSelectedPiece()) {
             this.hexagonRenderer.drawValidMoveHighlights(
-                this.dragDropManager.getValidMoveHexagons(),
-                this.hexGridManager.getAllGridHexagons(),
-                this.hexGridManager.getGridHexSize()
+                dragDropManager.getValidMoveHexagons(),
+                hexGridManager.getAllGridHexagons(),
+                hexGridManager.getGridHexSize()
             );
             
             // Show drag and drop tooltip
-            this.tooltipManager.showTooltip('Drag to a valid highlighted position');
-        } else if (!this.forcedSelectionManager.isInSelectionMode()) {
+            tooltipManager.showTooltip('Drag to a valid highlighted position');
+        } else if (!forcedSelectionManager.isInSelectionMode()) {
             // Hide tooltip when not in special modes
-            this.tooltipManager.hideTooltip();
+            tooltipManager.hideTooltip();
         }
         
         // Draw beacon path highlights when in beacon selection mode
-        if (this.forcedSelectionManager.isInSelectionMode()) {
+        if (forcedSelectionManager.isInSelectionMode()) {
             this.hexagonRenderer.drawForcedSelectionHighlights(
-                this.forcedSelectionManager.getHighlightedTiles(),
-                this.hexGridManager.getAllGridHexagons(),
-                this.hexGridManager.getGridHexSize(),
-                this.forcedSelectionManager.getCurrentOptions()?.highlightColor || "rgba(0, 255, 255, 0.5)"
+                forcedSelectionManager.getHighlightedTiles(),
+                hexGridManager.getAllGridHexagons(),
+                hexGridManager.getGridHexSize(),
+                forcedSelectionManager.getCurrentOptions()?.highlightColor || "rgba(0, 255, 255, 0.5)"
             );
         }
     }
 
     public updatePieceSizes(newHexSize: number, allHexagons: GridHexagon[]): void {
-        this.pieceManager.updatePieceSizes(newHexSize, allHexagons);
+        PieceManager.getInstance().updatePieceSizes(newHexSize, allHexagons);
     }
 
     public removePiece(piece: Piece): void {
-        this.pieceManager.removePiece(piece);
+        PieceManager.getInstance().removePiece(piece);
         this.canvas.dispatchEvent(new Event('redraw'));
     }
     
     // Method to force piece to move along a beacon path
-    public async ForceMoveAlongBeaconPath(piece: Piece, beacon: Beacon): Promise<void> {
-        const connectedBeacons = beacon.FindBeaconsInPath();
-        const beaconCoords = connectedBeacons.map(b => ({
+    public async ForceMoveAlongBeaconPath(piece: Piece, beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
+        var connectedBeacons = beacon.FindBeaconsInPath();
+        
+        // Filter out beacons that don't belong to the same player
+        if (!allowEnemyBeacons) {
+            connectedBeacons = connectedBeacons.filter((b: any) => b.playerId === piece.playerId);
+        }
+
+        const beaconCoords = connectedBeacons.map((b: any) => ({
             q: b.q,
             r: b.r,
             s: b.s
         }));
 
-        return this.forcedSelectionManager.startForcedSelection(
+        // If there are no valid beacons, return early
+        if (beaconCoords.length === 0) {
+            return Promise.resolve(null);
+        }
+
+        const forcedSelectionManager = ForcedSelectionManager.getInstance();
+        const hexGridManager = HexGridManager.getInstance();
+
+        return forcedSelectionManager.startForcedSelection(
             beaconCoords,
             {
                 selectionMessage: "Select a beacon to move to",
@@ -137,14 +158,14 @@ export class InteractionManager {
                 allowCancel: true,
                 timeout: 30000,
                 onSelection: async (selectedTile) => {
-                    const selectedBeacon = connectedBeacons.find(b => 
+                    const selectedBeacon = connectedBeacons.find((b: any) => 
                         b.q === selectedTile.q && 
                         b.r === selectedTile.r && 
                         b.s === selectedTile.s
                     );
                     if (selectedBeacon) {
                         // Move the piece to the selected beacon
-                        const targetHex = this.hexGridManager.findHexagonByCoord(
+                        const targetHex = hexGridManager.findHexagonByCoord(
                             selectedBeacon.q,
                             selectedBeacon.r,
                             selectedBeacon.s
@@ -162,12 +183,12 @@ export class InteractionManager {
     
     // Cleanup on destruction
     public cleanup(): void {
-        this.blinkManager.cleanup();
-        this.tooltipManager.cleanup();
+        BlinkManager.getInstance().cleanup();
+        TooltipManager.getInstance().cleanup();
         this.inputHandler.cleanup();
     }
 
     public getAllPieces(): Piece[] {
-        return this.pieceManager.getPieces();
+        return PieceManager.getInstance().getPieces();
     }
 } 

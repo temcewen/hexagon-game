@@ -108,9 +108,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const baseHexSize = 50;
         const newHexSize = baseHexSize * (logicalWidth / 1920);
 
-        // Recreate the black grid with new size
+        // Update the black grid with new size (no recreation needed)
         blackGrid.updateHexSize(newHexSize);
-        blackGrid.createGrid();
         const updatedHexagons = blackGrid.getHexagons();
 
         // Update drag drop manager with new hexagons

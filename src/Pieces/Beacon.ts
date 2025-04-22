@@ -1,17 +1,38 @@
 import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
 import { HexUtils } from '../utils/HexUtils.js';
+import { PlayerManager } from '../managers/PlayerManager.js';
+import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
+import { ShadowPosition } from './ShadowPosition.js';
 
 export class Beacon extends Piece {
-    private image: HTMLImageElement;
+    private image: HTMLImageElement | HTMLCanvasElement;
     private rotationDegrees: number;
     public is3D: boolean;
     private readonly SIZE_MULTIPLIER = 2.5;
+    private imageLoaded: boolean = false;
+    private playerManager: PlayerManager;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, rotationDegrees: number = 0, is3D: boolean = false, playerId: string) {
         super(ctx, hexSize, position, playerId);
+        
+        // Get the PlayerManager instance
+        this.playerManager = PlayerManager.getInstance();
+        
+        // Load the beacon image
         this.image = new Image();
         this.image.src = is3D ? 'assets/beacon-3.png' : 'assets/beacon-2.png';
+        this.image.onload = () => {
+            // Get the player's color and recolor the image
+            const playerColor = this.playerManager.getPlayerColor(playerId);
+            this.image = ImageRecolorRenderer.recolorWithPlayerColor(
+                this.image as HTMLImageElement,
+                playerColor,
+                .9
+            );
+            this.imageLoaded = true;
+        };
+        
         this.rotationDegrees = rotationDegrees;
         this.is3D = is3D;
     }
@@ -32,19 +53,21 @@ export class Beacon extends Piece {
             this.ctx.stroke();
         }
 
-        // Set up the transformation for rotation
-        this.ctx.translate(this.x, this.y);
-        this.ctx.rotate(this.rotationDegrees * Math.PI / 180);
-        
-        // Draw the beacon image with size multiplier
-        const imageSize = this.hexSize * this.SIZE_MULTIPLIER;
-        this.ctx.drawImage(
-            this.image, 
-            -imageSize / 2,  // Centered x
-            -imageSize / 2,  // Centered y
-            imageSize, 
-            imageSize
-        );
+        if (this.imageLoaded) {
+            // Set up the transformation for rotation
+            this.ctx.translate(this.x, this.y);
+            this.ctx.rotate(this.rotationDegrees * Math.PI / 180);
+            
+            // Draw the beacon image with size multiplier
+            const imageSize = this.hexSize * this.SIZE_MULTIPLIER;
+            this.ctx.drawImage(
+                this.image, 
+                -imageSize / 2,  // Centered x
+                -imageSize / 2,  // Centered y
+                imageSize, 
+                imageSize
+            );
+        }
 
         // Restore the context state
         this.ctx.restore();
@@ -88,7 +111,10 @@ export class Beacon extends Piece {
         if (!super.canMoveTo(coord.q, coord.r, coord.s)) {
             return false;
         }
-        else if (pieces.length == 0 || (pieces.length == 1 && pieces[0] instanceof Beacon)) {
+        else if (pieces.length == 0) {
+            return true;
+        }
+        else if (!pieces.some((p) => !(p instanceof Beacon || p instanceof ShadowPosition))) {
             return true;
         }
         return false;
@@ -133,11 +159,16 @@ export class Beacon extends Piece {
                         );
                     }
                     
-                    // Check if there's exactly one piece and it's a beacon
-                    if (piecesAtPosition.length === 1 && piecesAtPosition[0] instanceof Beacon) {
-                        const nextBeacon = piecesAtPosition[0] as Beacon;
-                        visited.add(key);
-                        queue.push(nextBeacon);
+                    // Check if there's a beacon (ignoring shadow positions)
+                    const nonShadowPieces = piecesAtPosition.filter(p => !(p instanceof ShadowPosition));
+                    if (nonShadowPieces.length === 1 && nonShadowPieces[0] instanceof Beacon) {
+                        const nextBeacon = nonShadowPieces[0] as Beacon;
+                        
+                        // Only connect to beacons with the same playerId
+                        if (nextBeacon.playerId === this.playerId) {
+                            visited.add(key);
+                            queue.push(nextBeacon);
+                        }
                         break;
                     }
 
@@ -155,5 +186,24 @@ export class Beacon extends Piece {
         }
 
         return result;
+    }
+
+    public changePlayerControl(newPlayerId: string): Beacon {
+        // Create a new beacon with the same properties but new player ID
+        const newBeacon = new Beacon(
+            this.ctx,
+            this.hexSize,
+            {
+                x: this.x,
+                y: this.y,
+                q: this.q,
+                r: this.r,
+                s: this.s
+            },
+            this.rotationDegrees,
+            this.is3D,
+            newPlayerId
+        );
+        return newBeacon;
     }
 }

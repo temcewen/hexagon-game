@@ -16,12 +16,32 @@ export class DragDropManager {
     private readonly CLICK_THRESHOLD_MS: number = 200; // Max time for a click
     private readonly CLICK_DISTANCE_THRESHOLD: number = 5; // Max distance for a click
     
-    private hexGridManager: HexGridManager;
-    private pieceManager: PieceManager;
+    // Singleton instance
+    private static instance: DragDropManager | null = null;
     
-    constructor(hexGridManager: HexGridManager, pieceManager: PieceManager) {
-        this.hexGridManager = hexGridManager;
-        this.pieceManager = pieceManager;
+    // Private constructor to enforce singleton pattern
+    private constructor() {
+        if (DragDropManager.instance) {
+            throw new Error('DragDropManager instance already exists. Use getInstance() instead of creating a new instance.');
+        }
+    }
+    
+    /**
+     * Gets the singleton instance of DragDropManager
+     */
+    public static getInstance(): DragDropManager {
+        if (!DragDropManager.instance) {
+            DragDropManager.instance = new DragDropManager();
+        }
+        return DragDropManager.instance;
+    }
+    
+    private get hexGridManager(): HexGridManager {
+        return HexGridManager.getInstance();
+    }
+    
+    private get pieceManager(): PieceManager {
+        return PieceManager.getInstance();
     }
     
     public getSelectedPiece(): Piece | null {
@@ -140,8 +160,8 @@ export class DragDropManager {
                         fromPosition.r !== closestHexagon.r ||
                         fromPosition.s !== closestHexagon.s) {
                         // Call onDropped only if the position changed
-                        if (this.selectedPiece.onDropped) {
-                            this.selectedPiece.onDropped(fromPosition);
+                        if (this.selectedPiece.onPlaced) {
+                            this.selectedPiece.onPlaced(fromPosition);
                             pieceInteracted = true;
                         }
                     }

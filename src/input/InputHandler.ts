@@ -5,21 +5,9 @@ import { HexGridManager } from '../managers/HexGridManager.js';
 
 export class InputHandler {
     private canvas: HTMLCanvasElement;
-    private dragDropManager: DragDropManager;
-    private forcedSelectionManager: ForcedSelectionManager;
-    private hexGridManager: HexGridManager;
     
-    constructor(
-        canvas: HTMLCanvasElement, 
-        dragDropManager: DragDropManager,
-        forcedSelectionManager: ForcedSelectionManager,
-        hexGridManager: HexGridManager
-    ) {
+    constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
-        this.dragDropManager = dragDropManager;
-        this.forcedSelectionManager = forcedSelectionManager;
-        this.hexGridManager = hexGridManager;
-        
         this.setupEventListeners();
     }
     
@@ -42,12 +30,12 @@ export class InputHandler {
         const mousePos = this.getMousePos(e);
         
         // If in forced selection mode, ignore mouse down
-        if (this.forcedSelectionManager.isInSelectionMode()) {
+        if (ForcedSelectionManager.getInstance().isInSelectionMode()) {
             return;
         }
         
         // Otherwise, delegate to drag drop manager
-        this.dragDropManager.handleMouseDown(mousePos);
+        DragDropManager.getInstance().handleMouseDown(mousePos);
         
         // Trigger a redraw
         this.canvas.dispatchEvent(new Event('redraw'));
@@ -57,12 +45,12 @@ export class InputHandler {
         const mousePos = this.getMousePos(e);
         
         // If in forced selection mode, ignore mouse movement
-        if (this.forcedSelectionManager.isInSelectionMode()) {
+        if (ForcedSelectionManager.getInstance().isInSelectionMode()) {
             return;
         }
         
         // Otherwise, delegate to drag drop manager
-        this.dragDropManager.handleMouseMove(mousePos);
+        DragDropManager.getInstance().handleMouseMove(mousePos);
         
         // Trigger a redraw
         this.canvas.dispatchEvent(new Event('redraw'));
@@ -72,15 +60,15 @@ export class InputHandler {
         const mousePos = this.getMousePos(e);
         
         // If in forced selection mode, handle selection
-        if (this.forcedSelectionManager.isInSelectionMode()) {
-            this.forcedSelectionManager.handleClick(mousePos, (point) => {
-                return this.hexGridManager.getHexCoordAtPoint(point);
+        if (ForcedSelectionManager.getInstance().isInSelectionMode()) {
+            ForcedSelectionManager.getInstance().handleClick(mousePos, (point) => {
+                return HexGridManager.getInstance().getHexCoordAtPoint(point);
             });
             return;
         }
         
         // Otherwise, delegate to drag drop manager
-        this.dragDropManager.handleMouseUp(mousePos);
+        DragDropManager.getInstance().handleMouseUp(mousePos);
         
         // Trigger a redraw
         this.canvas.dispatchEvent(new Event('redraw'));
@@ -88,12 +76,12 @@ export class InputHandler {
     
     private handleMouseLeave(): void {
         // If in forced selection mode, ignore mouse leave
-        if (this.forcedSelectionManager.isInSelectionMode()) {
+        if (ForcedSelectionManager.getInstance().isInSelectionMode()) {
             return;
         }
         
         // Otherwise, delegate to drag drop manager
-        this.dragDropManager.handleMouseLeave();
+        DragDropManager.getInstance().handleMouseLeave();
         
         // Trigger a redraw
         this.canvas.dispatchEvent(new Event('redraw'));

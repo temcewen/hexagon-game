@@ -47,7 +47,7 @@ export abstract class Piece {
     }
 
     // Optional method for handling drop events
-    public onDropped?(fromPosition: { q: number, r: number, s: number }): void | Promise<void> {
+    public onPlaced?(fromPosition: { q: number, r: number, s: number }): void | Promise<void> {
         // Base implementation does nothing.
     }
 
@@ -154,7 +154,12 @@ export abstract class Piece {
         return true; // Default behavior: pieces are movable
     }
 
-    protected getPossibleMovesByDirection(availableDistance: number): HexCoord[] {
+    protected getPossibleMovesByDirection(
+        availableDistance: number, 
+        allowEnemyBeacons: boolean = false,
+        canMoveIntoEnemyPieces: boolean = false,
+        canMoveIntoFriendlyPieces: boolean = false
+    ): HexCoord[] {
         // Initialize a set to store unique valid moves
         const validMovesSet = new Set<string>();
 
@@ -190,7 +195,7 @@ export abstract class Piece {
                 if (!isValidBoardPosition) break; // Stop exploring this direction if we're off the board
 
                 // Check if position is blocked
-                if (Piece.interactionManager.isPositionBlocked(this, move)) {
+                if (Piece.interactionManager.isPositionBlocked(this, move, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
                     break; // Stop exploring this direction if we hit a blocking piece
                 }
 
@@ -206,23 +211,39 @@ export abstract class Piece {
             const move = keyToCoord(moveKey);
             finalValidMoves.add(moveKey);
 
-            // Process beacon paths if a beacon exists at this position
-            const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
+            // Get pieces at the position to check for beacons
+            const piecesAtPosition = this.getPiecesAtPosition(move.q, move.r, move.s);
             
-            // Add each unblocked beacon path coordinate
-            beaconPaths.forEach((pathBeacon) => {
-                const pathKey = coordToKey(pathBeacon);
-                if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon)) {
-                    finalValidMoves.add(pathKey);
-                }
-            });
+            // Find a beacon by checking if the constructor name is "Beacon" instead of using instanceof
+            const beaconAtPosition = piecesAtPosition.find(p => 
+                p.constructor.name === "Beacon" && (allowEnemyBeacons || p.playerId === this.playerId)
+            );
+            
+            // Only process beacon paths if we found a beacon
+            if (beaconAtPosition) {
+                // Process beacon paths if a beacon exists at this position
+                const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
+                
+                // Add each unblocked beacon path coordinate
+                beaconPaths.forEach((pathBeacon) => {
+                    const pathKey = coordToKey(pathBeacon);
+                    if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+                        finalValidMoves.add(pathKey);
+                    }
+                });
+            }
         }
 
         // Convert the final set back to an array of HexCoords
         return Array.from(finalValidMoves).map(keyToCoord);
     }
 
-    protected getPossibleMovesAnyDirection(availableDistance: number): HexCoord[] {
+    protected getPossibleMovesAnyDirection(
+        availableDistance: number, 
+        allowEnemyBeacons: boolean = false,
+        canMoveIntoEnemyPieces: boolean = false,
+        canMoveIntoFriendlyPieces: boolean = false
+    ): HexCoord[] {
         // Initialize a set to store unique valid moves
         const validMovesSet = new Set<string>();
 
@@ -274,7 +295,7 @@ export abstract class Piece {
                 if (!isValidBoardPosition) continue;
 
                 // Check if position is blocked
-                if (Piece.interactionManager.isPositionBlocked(this, nextMove)) continue;
+                if (Piece.interactionManager.isPositionBlocked(this, nextMove, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) continue;
 
                 // Add valid move to set
                 validMovesSet.add(moveKey);
@@ -291,16 +312,27 @@ export abstract class Piece {
             const move = keyToCoord(moveKey);
             finalValidMoves.add(moveKey);
 
-            // Process beacon paths if a beacon exists at this position
-            const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
+            // Get pieces at the position to check for beacons
+            const piecesAtPosition = this.getPiecesAtPosition(move.q, move.r, move.s);
             
-            // Add each unblocked beacon path coordinate
-            beaconPaths.forEach((pathBeacon) => {
-                const pathKey = coordToKey(pathBeacon);
-                if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon)) {
-                    finalValidMoves.add(pathKey);
-                }
-            });
+            // Find a beacon by checking if the constructor name is "Beacon" instead of using instanceof
+            const beaconAtPosition = piecesAtPosition.find(p => 
+                p.constructor.name === "Beacon" && (allowEnemyBeacons || p.playerId === this.playerId)
+            );
+            
+            // Only process beacon paths if we found a beacon
+            if (beaconAtPosition) {
+                // Process beacon paths if a beacon exists at this position
+                const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
+                
+                // Add each unblocked beacon path coordinate
+                beaconPaths.forEach((pathBeacon) => {
+                    const pathKey = coordToKey(pathBeacon);
+                    if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+                        finalValidMoves.add(pathKey);
+                    }
+                });
+            }
         }
 
         // Convert the final set back to an array of HexCoords
@@ -313,12 +345,12 @@ export abstract class Piece {
     }
 
     // Method to force moving along a beacon path
-    public ForceMoveAlongBeaconPath(beacon: any): Promise<void> {
+    public ForceMoveAlongBeaconPath(beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
         if (!Piece.interactionManager) {
             console.warn('InteractionManager not set - cannot force move along beacon path');
-            return Promise.resolve();
+            return Promise.resolve(null);
         }
         // Pass the call to InteractionManager to avoid circular dependency
-        return Piece.interactionManager.ForceMoveAlongBeaconPath(this, beacon);
+        return Piece.interactionManager.ForceMoveAlongBeaconPath(this, beacon, allowEnemyBeacons);
     }
 } 

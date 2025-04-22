@@ -78,7 +78,7 @@ export class Mage extends Piece {
         return validMoves;
     }
 
-    public async onDropped(fromPosition: { q: number, r: number, s: number }) {
+    public async onPlaced(fromPosition: { q: number, r: number, s: number }) {
         // Get pieces at the new position
         const piecesAtNewPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
         
@@ -126,7 +126,7 @@ export class Mage extends Piece {
         }
         
         // Start forced selection mode
-        await piece.ForceMoveAlongBeaconPath(beacon);
+        await piece.ForceMoveAlongBeaconPath(beacon, true);
         await delay(200);
     }
 }
