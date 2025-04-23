@@ -1,5 +1,9 @@
 import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
+import { Beacon } from '../pieces/Beacon.js';
+import { Resource } from '../pieces/Resource.js';
+import { ShadowPosition } from '../pieces/ShadowPosition.js';
+import { Transponder } from '../pieces/Transponder.js';
 
 export class PieceManager {
     private pieces: Map<string, Piece> = new Map();
@@ -60,21 +64,13 @@ export class PieceManager {
     ): boolean {
         const piecesAtPosition = this.getPiecesAtPosition(position.q, position.r, position.s);
         
-        // Check if there's a beacon at this position
-        const beaconAtPosition = piecesAtPosition.find(p => p.constructor.name === "Beacon");
-        
-        // If there's a beacon and it belongs to a different player, block the move unless allowEnemyBeacons is true
-        if (beaconAtPosition && beaconAtPosition.playerId !== piece.playerId && !allowEnemyBeacons) {
-            return true;
-        }
-        
         // Check each piece at the position
         return piecesAtPosition.some(p => {
             // Don't block self
             if (p === piece) return false;
             
-            // Always allow beacons and shadow positions
-            if (p.constructor.name === "Beacon" || p.constructor.name === "ShadowPosition") return false;
+            // Always allow beacons, shadow positions, and resources
+            if (p instanceof Beacon || p instanceof ShadowPosition || p instanceof Resource) return false;
             
             // Handle enemy pieces
             if (p.playerId !== piece.playerId) {
@@ -88,12 +84,10 @@ export class PieceManager {
 
     public getBeaconPathsFromPosition(position: HexCoord): HexCoord[] {
         const piecesAtPosition = this.getPiecesAtPosition(position.q, position.r, position.s);
-        const beacon = piecesAtPosition.find(piece => piece.constructor.name === "Beacon");
+        const beacon = piecesAtPosition.find(piece => piece instanceof Beacon);
         
         if (beacon) {
-            // Find beacons in path will naturally only find beacons of the same player
-            // because we modified the method to check playerIds
-            return (beacon as any).FindBeaconsInPath();
+            return (beacon as Beacon).FindBeaconsInPath();
         }
         
         return [];
@@ -106,9 +100,9 @@ export class PieceManager {
             if (hexagon) {
                 // Update piece with new position and size
                 // Beacons are 2.5x, Red pieces are 0.8x, Transponders are 1x, others (blue) are 0.6x
-                const isRedPiece = piece.constructor.name === "Resource";
-                const isTransponder = piece.constructor.name === "Transponder";
-                const isBeacon = piece.constructor.name === "Beacon";
+                const isRedPiece = piece instanceof Resource;
+                const isTransponder = piece instanceof Transponder;
+                const isBeacon = piece instanceof Beacon;
                 const sizeRatio = isBeacon ? 1.0 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));
                 piece.updateSize(newHexSize, sizeRatio);
                 piece.moveTo(hexagon);
@@ -117,9 +111,9 @@ export class PieceManager {
                 // This could happen if the grid dimensions change significantly.
                 console.warn(`Could not find corresponding hexagon for piece at (${piece.q}, ${piece.r}, ${piece.s}) after resize.`);
                 // As a fallback, update the size but keep the old coords (which might be off-screen)
-                const isRedPiece = piece.constructor.name === "Resource";
-                const isTransponder = piece.constructor.name === "Transponder";
-                const isBeacon = piece.constructor.name === "Beacon";
+                const isRedPiece = piece instanceof Resource;
+                const isTransponder = piece instanceof Transponder;
+                const isBeacon = piece instanceof Beacon;
                 const sizeRatio = isBeacon ? 2.5 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));
                 piece.updateSize(newHexSize, sizeRatio);
             }
@@ -128,18 +122,25 @@ export class PieceManager {
     
     // Draw all pieces, with optional highlighting of selected piece
     public drawPieces(selectedPiece: Piece | null = null): void {
-        // Sort pieces by type first (beacons -> shadows -> others) and then by z-index
+        // Sort pieces by type first (beacons -> resources -> shadows -> others) and then by z-index
         const sortedPieces = Array.from(this.pieces.values()).sort((a, b) => {
             // Beacons should always be drawn first (lowest z-index)
-            if (a.constructor.name === "Beacon" && b.constructor.name !== "Beacon") return -1;
-            if (b.constructor.name === "Beacon" && a.constructor.name !== "Beacon") return 1;
+            if (a instanceof Beacon && !(b instanceof Beacon)) return -1;
+            if (b instanceof Beacon && !(a instanceof Beacon)) return 1;
+            
+            // Resources should be above Beacons but below everything else
+            if (a instanceof Resource && !(b instanceof Resource)) {
+                return b instanceof Beacon ? 1 : -1;  // 1 if Beacon (go after), -1 if other (go before)
+            }
+            if (b instanceof Resource && !(a instanceof Resource)) {
+                return a instanceof Beacon ? -1 : 1;  // -1 if Beacon (go before), 1 if other (go after)
+            }
             
             // Then ShadowPositions
-            if (a.constructor.name === "ShadowPosition" && b.constructor.name !== "ShadowPosition") return -1;
-            if (b.constructor.name === "ShadowPosition" && a.constructor.name !== "ShadowPosition") return 1;
+            if (a instanceof ShadowPosition && !(b instanceof ShadowPosition)) return -1;
+            if (b instanceof ShadowPosition && !(a instanceof ShadowPosition)) return 1;
             
-            // If both pieces are of the same type (both beacons, both shadows, or both others),
-            // sort by z-index
+            // If both pieces are of the same type, sort by z-index
             return a.zIndex - b.zIndex;
         });
         

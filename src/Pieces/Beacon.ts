@@ -2,11 +2,10 @@ import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
 import { HexUtils } from '../utils/HexUtils.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
-import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { ShadowPosition } from './ShadowPosition.js';
 
 export class Beacon extends Piece {
-    private image: HTMLImageElement | HTMLCanvasElement;
+    private image: HTMLImageElement;
     private rotationDegrees: number;
     public is3D: boolean;
     private readonly SIZE_MULTIPLIER = 2.5;
@@ -23,13 +22,6 @@ export class Beacon extends Piece {
         this.image = new Image();
         this.image.src = is3D ? 'assets/beacon-3.png' : 'assets/beacon-2.png';
         this.image.onload = () => {
-            // Get the player's color and recolor the image
-            const playerColor = this.playerManager.getPlayerColor(playerId);
-            this.image = ImageRecolorRenderer.recolorWithPlayerColor(
-                this.image as HTMLImageElement,
-                playerColor,
-                .9
-            );
             this.imageLoaded = true;
         };
         
@@ -163,12 +155,8 @@ export class Beacon extends Piece {
                     const nonShadowPieces = piecesAtPosition.filter(p => !(p instanceof ShadowPosition));
                     if (nonShadowPieces.length === 1 && nonShadowPieces[0] instanceof Beacon) {
                         const nextBeacon = nonShadowPieces[0] as Beacon;
-                        
-                        // Only connect to beacons with the same playerId
-                        if (nextBeacon.playerId === this.playerId) {
-                            visited.add(key);
-                            queue.push(nextBeacon);
-                        }
+                        visited.add(key);
+                        queue.push(nextBeacon);
                         break;
                     }
 

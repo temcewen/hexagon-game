@@ -5,6 +5,8 @@ import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { PieceManager } from '../managers/PieceManager.js';
 import { ShadowPosition } from './ShadowPosition.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
+import { Beacon } from './Beacon.js';
+import { Resource } from './Resource.js';
 
 export class Berserker extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
@@ -46,7 +48,9 @@ export class Berserker extends Piece {
             // Skip if it's our own piece or if it's a beacon/shadow
             if (piece === this || 
                 piece.playerId === this.playerId || 
-                piece instanceof ShadowPosition) {
+                piece instanceof ShadowPosition ||
+                piece instanceof Beacon ||
+                piece instanceof Resource) {
                 return;
             }
             

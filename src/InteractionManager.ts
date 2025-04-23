@@ -131,11 +131,6 @@ export class InteractionManager {
     public async ForceMoveAlongBeaconPath(piece: Piece, beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
         var connectedBeacons = beacon.FindBeaconsInPath();
         
-        // Filter out beacons that don't belong to the same player
-        if (!allowEnemyBeacons) {
-            connectedBeacons = connectedBeacons.filter((b: any) => b.playerId === piece.playerId);
-        }
-
         const beaconCoords = connectedBeacons.map((b: any) => ({
             q: b.q,
             r: b.r,

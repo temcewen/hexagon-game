@@ -216,7 +216,7 @@ export abstract class Piece {
             
             // Find a beacon by checking if the constructor name is "Beacon" instead of using instanceof
             const beaconAtPosition = piecesAtPosition.find(p => 
-                p.constructor.name === "Beacon" && (allowEnemyBeacons || p.playerId === this.playerId)
+                p.constructor.name === "Beacon"
             );
             
             // Only process beacon paths if we found a beacon
@@ -317,7 +317,7 @@ export abstract class Piece {
             
             // Find a beacon by checking if the constructor name is "Beacon" instead of using instanceof
             const beaconAtPosition = piecesAtPosition.find(p => 
-                p.constructor.name === "Beacon" && (allowEnemyBeacons || p.playerId === this.playerId)
+                p.constructor.name === "Beacon"
             );
             
             // Only process beacon paths if we found a beacon

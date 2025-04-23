@@ -7,7 +7,7 @@ export class Resource extends Piece {
     private popupMenu: PopupMenu;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
-        super(ctx, hexSize * 0.8, position, playerId); // Resource pieces are 80% the size of grid hexagons
+        super(ctx, hexSize * 0.55, position, playerId); // Resource pieces are 80% the size of grid hexagons
         this.popupMenu = PopupMenu.getInstance();
     }
 
@@ -44,9 +44,11 @@ export class Resource extends Piece {
         // Apply the gradient
         this.ctx.fillStyle = gradient;
         this.ctx.fill();
-
-        // Request next frame for animation
-        requestAnimationFrame(() => this.draw(isSelected));
+        
+        // Draw border
+        this.ctx.strokeStyle = '#B8860B'; // Dark gold border
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
     }
     
     // Override canMoveTo to prevent movement to (-5, -1)
