@@ -5,6 +5,7 @@ import { GridHexagon } from '../Types.js';
 import { InteractionManager } from '../InteractionManager.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
+import { Resource } from './Resource.js';
 
 export enum BeaconType {
     TwoDirectional = '2D',
@@ -165,6 +166,11 @@ export class Transponder extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+
+        if (this.isSharingTileWith(Resource)) {
+            this.addResourceSpotlight();
+        }
+
         // Draw the robot image if loaded
         if (this.imageLoaded) {
             this.ctx.save();

@@ -68,7 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const allHexagons = blackGrid.getHexagons();
     
     // Create interaction manager
-    const interactionManager = new InteractionManager(canvas, ctx, hexSize);
+    const interactionManager = InteractionManager.getInstance();
+    interactionManager.initialize(canvas, ctx, hexSize);
     interactionManager.setGridHexagons(allHexagons);
 
     // Set up the interaction manager reference in Piece class

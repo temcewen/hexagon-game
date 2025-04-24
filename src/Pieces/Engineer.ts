@@ -5,6 +5,7 @@ import { Beacon } from './Beacon.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
 import { PieceManager } from '../managers/PieceManager.js';
+import { Resource } from './Resource.js';
 
 export class Engineer extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
@@ -40,6 +41,11 @@ export class Engineer extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+
+        if (this.isSharingTileWith(Resource)) {
+            this.addResourceSpotlight();
+        }
+
         // Draw the image if loaded
         if (this.imageLoaded) {
             this.ctx.save();

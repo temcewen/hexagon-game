@@ -1,6 +1,7 @@
-import { GridHexagon } from './Types.js';
+import { GridHexagon, HexPosition } from './Types.js';
 import { InteractionManager } from './InteractionManager.js';
 import { HexUtils } from './utils/HexUtils.js';
+import { HexGridManager } from './managers/HexGridManager.js';
 
 export interface Point {
     x: number;
@@ -83,12 +84,25 @@ export abstract class Piece {
     }
 
     // Method to move piece to a new position
-    public moveTo(position: GridHexagon): void {
+    public moveToGridHex(position: GridHexagon): void {
         this.x = position.x;
         this.y = position.y;
         this.q = position.q;
         this.r = position.r;
         this.s = position.s;
+    }
+
+    public moveTo(pos: HexPosition) {
+        // Get the grid hexagon for the original position
+        const fromHexagon = this.getGridHexagons().find(hex => 
+            hex.q === pos.q && 
+            hex.r === pos.r && 
+            hex.s === pos.s
+        );
+
+        if (fromHexagon != null) {
+            this.moveToGridHex(fromHexagon);
+        }
     }
 
     // Add this method after the moveTo method
@@ -345,12 +359,71 @@ export abstract class Piece {
     }
 
     // Method to force moving along a beacon path
-    public ForceMoveAlongBeaconPath(beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
+    public forceMoveAlongBeaconPath(beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
         if (!Piece.interactionManager) {
             console.warn('InteractionManager not set - cannot force move along beacon path');
             return Promise.resolve(null);
         }
         // Pass the call to InteractionManager to avoid circular dependency
         return Piece.interactionManager.ForceMoveAlongBeaconPath(this, beacon, allowEnemyBeacons);
+    }
+
+    // Method to draw a golden hexagon border around the piece's tile
+    protected addResourceSpotlight(): void {
+        this.ctx.save();
+        
+        // Get the grid hexagon size from HexGridManager
+        const spotlightSize = HexGridManager.getInstance().getGridHexSize();
+        
+        // Draw the hexagon path using grid hexagon size
+        this.ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = 2 * Math.PI / 6 * i;
+            const hx = this.x + spotlightSize * Math.cos(angle);
+            const hy = this.y + spotlightSize * Math.sin(angle);
+            if (i === 0) {
+                this.ctx.moveTo(hx, hy);
+            } else {
+                this.ctx.lineTo(hx, hy);
+            }
+        }
+        this.ctx.closePath();
+        
+        // Create a golden gradient for the border
+        const gradient = this.ctx.createLinearGradient(
+            this.x - spotlightSize,
+            this.y - spotlightSize,
+            this.x + spotlightSize,
+            this.y + spotlightSize
+        );
+        
+        // Define gradient colors
+        gradient.addColorStop(0, '#FFD700');     // Gold
+        gradient.addColorStop(0.5, '#FFF3B0');   // Light gold
+        gradient.addColorStop(1, '#FFD700');     // Gold
+        
+        // Set border style
+        this.ctx.strokeStyle = gradient;
+        this.ctx.lineWidth = 3;
+        
+        // Draw the border
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+    }
+
+    // Check if this piece shares its tile with a piece of type T
+    public isSharingTileWith<T extends typeof Piece>(pieceType: T): boolean {
+        return this.pieceAtTileOf(pieceType, this.q, this.r, this.s) != null;
+    }
+
+    // Check if this piece shares its tile with a piece of type T
+    public pieceAtTileOf<T extends typeof Piece>(pieceType: T, q: number, r: number, s: number): T | null {
+        const piecesAtCurrentPosition = this.getPiecesAtPosition(q, r, s);
+        var all: any = piecesAtCurrentPosition.filter(piece => 
+            piece !== this && // Exclude self from check
+            piece instanceof pieceType // Check if piece is of the specified type
+        );
+        return all.length > 0 ? all[0] : null;
     }
 } 

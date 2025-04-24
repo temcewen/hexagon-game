@@ -1,6 +1,8 @@
 import { GridHexagon } from '../Types.js';
 import { Piece } from '../Piece.js';
 import { PopupMenu } from '../PopupMenu.js';
+import { ShadowPosition } from './ShadowPosition.js';
+import { Beacon } from './Beacon.js';
 
 export class Resource extends Piece {
     private readonly _isMovable: boolean;
@@ -16,6 +18,21 @@ export class Resource extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+        // Get all pieces at current position
+        const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
+        
+        // Check if there's any piece that's not a ShadowPosition or Beacon
+        const hasOtherPiece = piecesAtPosition.some(piece => 
+            piece !== this && 
+            !(piece instanceof ShadowPosition) && 
+            !(piece instanceof Beacon)
+        );
+
+        // If there's another piece (not Shadow/Beacon), don't draw
+        if (hasOtherPiece) {
+            return;
+        }
+
         this.drawHexagonPath();
         
         // Create a linear gradient for the gold effect

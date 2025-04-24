@@ -1,3 +1,9 @@
+export interface HexPosition {
+    q: number;
+    r: number;
+    s: number;
+}
+
 export interface BaseHexagon {
     x: number;
     y: number;

@@ -4,6 +4,7 @@ import { Beacon } from './Beacon.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
+import { Resource } from './Resource.js';
 
 export class Mage extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
@@ -35,6 +36,11 @@ export class Mage extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+
+        if (this.isSharingTileWith(Resource)) {
+            this.addResourceSpotlight();
+        }
+
         // Draw the image if loaded
         if (this.imageLoaded) {
             const size = this.hexSize * 1.5; // Make the image slightly larger than the hex
@@ -98,7 +104,7 @@ export class Mage extends Piece {
 
             if (fromHexagon) {
                 // Move the other piece to our original position with correct x,y coordinates
-                pieceToSwap.moveTo(fromHexagon);
+                pieceToSwap.moveToGridHex(fromHexagon);
 
                 // Check if either piece landed on a beacon
                 const piecesAtOriginalPos = this.getPiecesAtPosition(fromPosition.q, fromPosition.r, fromPosition.s);
@@ -126,7 +132,7 @@ export class Mage extends Piece {
         }
         
         // Start forced selection mode
-        await piece.ForceMoveAlongBeaconPath(beacon, true);
+        await piece.forceMoveAlongBeaconPath(beacon, true);
         await delay(200);
     }
 }

@@ -15,7 +15,27 @@ export class InteractionManager {
     private hexagonRenderer: HexagonRenderer;
     private inputHandler: InputHandler;
 
-    constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, hexSize: number) {
+    // Singleton instance
+    private static instance: InteractionManager | null = null;
+
+    // Private constructor to enforce singleton pattern
+    private constructor() {
+        if (InteractionManager.instance) {
+            throw new Error('InteractionManager instance already exists. Use getInstance() instead of creating a new instance.');
+        }
+    }
+
+    /**
+     * Gets the singleton instance of InteractionManager
+     */
+    public static getInstance(): InteractionManager {
+        if (!InteractionManager.instance) {
+            InteractionManager.instance = new InteractionManager();
+        }
+        return InteractionManager.instance;
+    }
+
+    public initialize(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, hexSize: number): void {
         this.canvas = canvas;
         
         // Initialize renderers
@@ -166,7 +186,7 @@ export class InteractionManager {
                             selectedBeacon.s
                         );
                         if (targetHex) {
-                            piece.moveTo(targetHex);
+                            piece.moveToGridHex(targetHex);
                             // Trigger a redraw
                             this.canvas.dispatchEvent(new Event('redraw'));
                         }

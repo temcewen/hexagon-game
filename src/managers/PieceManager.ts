@@ -1,9 +1,12 @@
 import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
 import { Beacon } from '../pieces/Beacon.js';
+import { Mage } from '../pieces/Mage.js';
 import { Resource } from '../pieces/Resource.js';
 import { ShadowPosition } from '../pieces/ShadowPosition.js';
 import { Transponder } from '../pieces/Transponder.js';
+import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
+import { InteractionManager } from '../InteractionManager.js';
 
 export class PieceManager {
     private pieces: Map<string, Piece> = new Map();
@@ -37,6 +40,75 @@ export class PieceManager {
     }
     
     public addPiece(piece: Piece): void {
+        // First, check if this piece has an onPlaced method (indicating it was moved from somewhere)
+        if (piece.onPlaced) {
+            // Get the original onPlaced function
+            const originalOnPlaced = piece.onPlaced;
+            
+            // Override onPlaced to handle resource movement
+            piece.onPlaced = async function(fromPosition: { q: number, r: number, s: number }) {
+
+                var originalResult = await originalOnPlaced.call(this, fromPosition);
+
+                // Get pieces at both positions
+                const piecesAtFormerPosition = this.getPiecesAtPosition(fromPosition.q, fromPosition.r, fromPosition.s);
+                const piecesAtNewPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
+                
+                // Find resources and mages at both positions
+                const resourceAtFormerPosition = piecesAtFormerPosition.find((p: Piece) => p instanceof Resource);
+                const resourceAtNewPosition = piecesAtNewPosition.find((p: Piece) => p instanceof Resource);
+                const mageAtFormerPosition = piecesAtFormerPosition.find((p: Piece) => p instanceof Mage);
+                const mageAtNewPosition = piecesAtNewPosition.find((p: Piece) => p instanceof Mage);
+                const mage = mageAtFormerPosition || mageAtNewPosition;
+                const resource = resourceAtFormerPosition || resourceAtNewPosition;
+
+                // If there's a resource at either position and a Mage is involved in the swap
+                if (resource && mage) {
+                    // Create array of possible positions for the resource
+                    const validPositions = [
+                        fromPosition, // Original position
+                        { q: this.q, r: this.r, s: this.s } // New position
+                    ];
+
+                    // Use the mage's forcedSelectionManager to let user choose resource position
+                    const forcedSelectionManager = ForcedSelectionManager.getInstance();
+                    const selectedPosition = await forcedSelectionManager.startForcedSelection(
+                        validPositions,
+                        {
+                            selectionMessage: "Select where to place the resource",
+                            highlightColor: "rgba(255, 215, 0, 0.5)", // Gold color for resource
+                            allowCancel: false
+                        }
+                    );
+
+                    // Move the resource to the selected position
+                    if (selectedPosition) {
+                        const targetHex = InteractionManager.getInstance().getAllGridHexagons().find((hex: GridHexagon) => 
+                            hex.q === selectedPosition.q && 
+                            hex.r === selectedPosition.r && 
+                            hex.s === selectedPosition.s
+                        );
+
+                        if (targetHex) {
+                            resource.moveToGridHex(targetHex);
+                        }
+                    }
+                } 
+                else if (resourceAtFormerPosition) {
+                    // Default behavior for non-Mage pieces: Move the resource to the new position
+                    resourceAtFormerPosition.moveToGridHex({
+                        q: this.q,
+                        r: this.r,
+                        s: this.s,
+                        x: this.x,
+                        y: this.y
+                    });
+                }
+
+                return originalResult;
+            };
+        }
+        
         this.pieces.set(piece.id, piece);
     }
     
@@ -105,7 +177,7 @@ export class PieceManager {
                 const isBeacon = piece instanceof Beacon;
                 const sizeRatio = isBeacon ? 1.0 : (isRedPiece ? 0.8 : (isTransponder ? 1.0 : 0.6));
                 piece.updateSize(newHexSize, sizeRatio);
-                piece.moveTo(hexagon);
+                piece.moveToGridHex(hexagon);
             } else {
                 // Optional: Handle cases where a piece's hexagon might not exist after resize
                 // This could happen if the grid dimensions change significantly.

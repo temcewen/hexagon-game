@@ -3,6 +3,7 @@ import { GridHexagon } from '../Types.js';
 import { HexCoord } from '../Piece.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
+import { Resource } from './Resource.js';
 
 export class Commander extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
@@ -31,6 +32,10 @@ export class Commander extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+        if (this.isSharingTileWith(Resource)) {
+            this.addResourceSpotlight();
+        }
+
         if (!this.imageLoaded) return;
 
         // Calculate the size for the image (slightly smaller than hex)

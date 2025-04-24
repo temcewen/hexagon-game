@@ -153,13 +153,13 @@ export class DragDropManager {
                     this.returnPieceToStart();
                 } else {
                     // Move piece to new position
-                    this.selectedPiece.moveTo(closestHexagon);
+                    this.selectedPiece.moveToGridHex(closestHexagon);
      
                     // Check if the position actually changed
                     if (fromPosition.q !== closestHexagon.q ||
                         fromPosition.r !== closestHexagon.r ||
                         fromPosition.s !== closestHexagon.s) {
-                        // Call onDropped only if the position changed
+                        // Call onPlaced only if the position changed
                         if (this.selectedPiece.onPlaced) {
                             this.selectedPiece.onPlaced(fromPosition);
                             pieceInteracted = true;

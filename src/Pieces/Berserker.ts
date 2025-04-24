@@ -84,6 +84,10 @@ export class Berserker extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+        if (this.isSharingTileWith(Resource)) {
+            this.addResourceSpotlight();
+        }
+
         if (!this.imageLoaded) return;
 
         // Calculate the size for the image (slightly smaller than hex size)
@@ -114,7 +118,7 @@ export class Berserker extends Piece {
         );
         
         if (targetHex) {
-            this.moveTo(targetHex);
+            this.moveToGridHex(targetHex);
         } else {
             console.warn('Invalid position selected for Berserker');
         }

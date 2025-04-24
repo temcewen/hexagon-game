@@ -6,6 +6,8 @@ import { InteractionManager } from '../InteractionManager.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { PlayerManager } from '../managers/PlayerManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
+import { Beacon } from './Beacon.js';
+import { Resource } from './Resource.js';
 
 export class Mystic extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
@@ -48,6 +50,11 @@ export class Mystic extends Piece {
     }
 
     public draw(isSelected: boolean): void {
+
+        if (this.isSharingTileWith(Resource)) {
+            this.addResourceSpotlight();
+        }
+
         if (!this.imageLoaded) return;
 
         // Save the current context state
@@ -79,8 +86,9 @@ export class Mystic extends Piece {
         if (!interactionManager) return [];
 
         // Get all pieces from the interaction manager that are ShadowPosition instances
+        // and belong to the same player
         const shadowPositions = interactionManager.getAllPieces()
-            .filter((piece: Piece) => piece instanceof ShadowPosition)
+            .filter((piece: Piece) => piece instanceof ShadowPosition && piece.playerId === this.playerId)
             .map((piece: Piece) => ({
                 q: piece.q,
                 r: piece.r,
@@ -156,7 +164,7 @@ export class Mystic extends Piece {
                                 );
 
                                 if (targetHex) {
-                                    // Find the ShadowPosition at the target location
+                                    // Find the ShadowPosition and other pieces at the target location
                                     const interactionManager = (Piece as any).interactionManager as InteractionManager;
                                     if (interactionManager) {
                                         const piecesAtTarget = interactionManager.getPiecesAtPosition(
@@ -164,20 +172,34 @@ export class Mystic extends Piece {
                                             selectedTile.r,
                                             selectedTile.s
                                         );
+                                        
+                                        // Find shadow position and pieces to move with it (excluding Beacons and Resources)
                                         const shadowAtTarget = piecesAtTarget.find(piece => piece instanceof ShadowPosition);
+                                        const piecesToMoveWithShadow = piecesAtTarget.filter(piece => 
+                                            !(piece instanceof ShadowPosition) && 
+                                            !(piece instanceof Beacon) && 
+                                            !(piece instanceof Resource)
+                                        );
                                         
                                         if (shadowAtTarget) {
                                             // Move the Mystic to the target position
-                                            this.moveTo(targetHex);
+                                            this.moveToGridHex(targetHex);
                                             
-                                            // Move the ShadowPosition to the Mystic's original position
+                                            // Find the hex for the shadow's new position (Mystic's original position)
                                             const shadowTargetHex = this.getGridHexagons().find(hex => 
                                                 hex.q === mysticOriginalPosition.q && 
                                                 hex.r === mysticOriginalPosition.r && 
                                                 hex.s === mysticOriginalPosition.s
                                             );
+
                                             if (shadowTargetHex) {
-                                                shadowAtTarget.moveTo(shadowTargetHex);
+                                                // Move the shadow position
+                                                shadowAtTarget.moveToGridHex(shadowTargetHex);
+                                                
+                                                // Move all pieces that were with the shadow
+                                                piecesToMoveWithShadow.forEach(piece => {
+                                                    piece.moveToGridHex(shadowTargetHex);
+                                                });
                                             }
                                             
                                             // Trigger a redraw
