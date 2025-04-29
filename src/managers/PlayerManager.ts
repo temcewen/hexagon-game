@@ -174,4 +174,17 @@ export class PlayerManager {
     public getClientPlayerColor(): PlayerColor {
         return this.getPlayerColor(this.getClientPlayer());
     }
+
+    public getAllPlayerIds(): string[] {
+        return [this.player1Id, this.player2Id];
+    }
+    
+    public getPlayerName(playerId: string): string {
+        if (playerId === this.player1Id) {
+            return "Player 1";
+        } else if (playerId === this.player2Id) {
+            return "Player 2";
+        }
+        return "Unknown Player";
+    }
 }

@@ -99,4 +99,8 @@ export class HexGridManager {
         
         return null;
     }
+
+    public getGridHexagonAtCoord(q: number, r: number, s: number): GridHexagon | null {
+        return this.gridHexagons.find(hex => hex.q === q && hex.r === r && hex.s === s) || null;
+    }
 } 

@@ -9,11 +9,15 @@ import { HexagonRenderer } from './renderers/HexagonRenderer.js';
 import { BlinkManager } from './managers/BlinkManager.js';
 import { ForcedSelectionManager } from './managers/ForcedSelectionManager.js';
 import { PlayerManager } from './managers/PlayerManager.js';
+import { PieceCreationManager } from './managers/PieceCreationManager.js';
+import { PieceCreationMenu } from './ui/PieceCreationMenu.js';
+import { PlayerSelectionDialog } from './ui/PlayerSelectionDialog.js';
 
 export class InteractionManager {
     private canvas: HTMLCanvasElement;
     private hexagonRenderer: HexagonRenderer;
     private inputHandler: InputHandler;
+    private dragDropManager: DragDropManager;
 
     // Singleton instance
     private static instance: InteractionManager | null = null;
@@ -52,6 +56,14 @@ export class InteractionManager {
         const playerManager = PlayerManager.getInstance();
         playerManager.initialize(ctx, hexSize);
         
+        // Initialize piece creation components
+        const pieceCreationManager = PieceCreationManager.getInstance();
+        pieceCreationManager.initialize(ctx, hexSize);
+        const pieceCreationMenu = PieceCreationMenu.getInstance();
+        pieceCreationMenu.initialize(canvas, ctx);
+        // Don't initialize the player selection dialog yet - it will be initialized when needed
+        // PlayerSelectionDialog.getInstance().initialize();
+        
         // Initialize input handler with required managers
         this.inputHandler = new InputHandler(canvas);
         
@@ -62,6 +74,8 @@ export class InteractionManager {
                 this.draw();
             }
         });
+
+        this.dragDropManager = dragDropManager;
     }
 
     public addPiece(piece: Piece): void {
@@ -136,10 +150,22 @@ export class InteractionManager {
                 forcedSelectionManager.getCurrentOptions()?.highlightColor || "rgba(0, 255, 255, 0.5)"
             );
         }
+
+        // Draw any active interface elements, like the piece creation menu
+        PieceCreationMenu.getInstance().draw();
+        
+        // Draw any currently dragged new piece
+        if (PieceCreationManager.getInstance().isDragging()) {
+            PieceCreationManager.getInstance().draw();
+        }
     }
 
-    public updatePieceSizes(newHexSize: number, allHexagons: GridHexagon[]): void {
-        PieceManager.getInstance().updatePieceSizes(newHexSize, allHexagons);
+    public updatePieceSizes(newHexSize: number, updatedHexagons: GridHexagon[]): void {
+        PieceManager.getInstance().updatePieceSizes(newHexSize, updatedHexagons);
+        
+        // Update piece creation components
+        PieceCreationManager.getInstance().updateHexSize(newHexSize);
+        PieceCreationMenu.getInstance().updateHexSize(newHexSize);
     }
 
     public removePiece(piece: Piece): void {

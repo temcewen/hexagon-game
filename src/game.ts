@@ -75,6 +75,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up the interaction manager reference in Piece class
     Piece.setInteractionManager(interactionManager);
 
+    // Set up a redraw event listener to force redraw when requested
+    canvas.addEventListener('redraw', function() {
+        // Don't call animate directly as it would cause infinite recursion
+        // Instead, just request a new frame to be rendered
+        requestAnimationFrame(() => {
+            // Draw without recursively scheduling more frames
+            const { width: currentWidth, height: currentHeight } = updateCanvasDimensions();
+            ctx.clearRect(0, 0, currentWidth, currentHeight);
+            
+            // Draw the black grid first
+            blackGrid.draw();
+            
+            // Draw all pieces using the interaction manager
+            interactionManager.draw();
+            
+            // Draw coordinates last so they appear on top
+            blackGrid.drawCoordinates();
+        });
+    });
+
     // Animation loop
     function animate(): void {
         const { width: currentWidth, height: currentHeight } = updateCanvasDimensions();

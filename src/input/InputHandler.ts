@@ -2,12 +2,18 @@ import { Point } from '../Piece.js';
 import { DragDropManager } from '../managers/DragDropManager.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { HexGridManager } from '../managers/HexGridManager.js';
+import { PieceCreationManager } from '../managers/PieceCreationManager.js';
+import { PieceCreationMenu } from '../ui/PieceCreationMenu.js';
 
 export class InputHandler {
     private canvas: HTMLCanvasElement;
+    private pieceCreationMenu: PieceCreationMenu;
+    private pieceCreationManager: PieceCreationManager;
     
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
+        this.pieceCreationMenu = PieceCreationMenu.getInstance();
+        this.pieceCreationManager = PieceCreationManager.getInstance();
         this.setupEventListeners();
     }
     
@@ -20,9 +26,10 @@ export class InputHandler {
     
     private getMousePos(e: MouseEvent): Point {
         const rect = this.canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) / (rect.width / (this.canvas.width / dpr)),
+            y: (e.clientY - rect.top) / (rect.height / (this.canvas.height / dpr))
         };
     }
     
@@ -31,6 +38,13 @@ export class InputHandler {
         
         // If in forced selection mode, ignore mouse down
         if (ForcedSelectionManager.getInstance().isInSelectionMode()) {
+            return;
+        }
+        
+        // First check if clicking in the piece creation menu
+        if (this.pieceCreationMenu.handleMouseDown(mousePos)) {
+            // If true, the menu handled it
+            this.canvas.dispatchEvent(new Event('redraw'));
             return;
         }
         
@@ -49,6 +63,13 @@ export class InputHandler {
             return;
         }
         
+        // Check if we're dragging a new piece from the menu
+        if (this.pieceCreationManager.isDragging()) {
+            this.pieceCreationManager.handleMouseMove(mousePos);
+            this.canvas.dispatchEvent(new Event('redraw'));
+            return;
+        }
+        
         // Otherwise, delegate to drag drop manager
         DragDropManager.getInstance().handleMouseMove(mousePos);
         
@@ -56,7 +77,7 @@ export class InputHandler {
         this.canvas.dispatchEvent(new Event('redraw'));
     }
     
-    private handleMouseUp(e: MouseEvent): void {
+    private async handleMouseUp(e: MouseEvent): Promise<void> {
         const mousePos = this.getMousePos(e);
         
         // If in forced selection mode, handle selection
@@ -64,6 +85,13 @@ export class InputHandler {
             ForcedSelectionManager.getInstance().handleClick(mousePos, (point) => {
                 return HexGridManager.getInstance().getHexCoordAtPoint(point);
             });
+            return;
+        }
+        
+        // Check if we're dropping a new piece from the menu
+        if (this.pieceCreationManager.isDragging()) {
+            await this.pieceCreationManager.handleMouseUp(mousePos);
+            this.canvas.dispatchEvent(new Event('redraw'));
             return;
         }
         
@@ -77,6 +105,13 @@ export class InputHandler {
     private handleMouseLeave(): void {
         // If in forced selection mode, ignore mouse leave
         if (ForcedSelectionManager.getInstance().isInSelectionMode()) {
+            return;
+        }
+        
+        // If dragging a new piece, cancel it
+        if (this.pieceCreationManager.isDragging()) {
+            this.pieceCreationManager.cancelDrag();
+            this.canvas.dispatchEvent(new Event('redraw'));
             return;
         }
         
