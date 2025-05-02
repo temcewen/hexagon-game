@@ -3,27 +3,21 @@ import { GridHexagon } from '../Types.js';
 import { Beacon } from './Beacon.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
 import { Resource } from './Resource.js';
+import { PlayerColor } from '../managers/PlayerManager.js';
 
 export class Mage extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private forcedSelectionManager: ForcedSelectionManager;
-    private playerManager: PlayerManager;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string, playerColor: PlayerColor) {
         super(ctx, hexSize, position, playerId);
-        
-        // Get the PlayerManager instance to access colors
-        this.playerManager = PlayerManager.getInstance();
         
         // Load the image
         this.image = new Image();
         this.image.src = 'assets/wizard.png';
         this.image.onload = () => {
-            // Get the player's color and recolor the image
-            const playerColor = this.playerManager.getPlayerColor(playerId);
             this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
                 playerColor

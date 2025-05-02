@@ -1,25 +1,22 @@
 import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { PieceManager } from '../managers/PieceManager.js';
 import { ShadowPosition } from './ShadowPosition.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { Beacon } from './Beacon.js';
 import { Resource } from './Resource.js';
+import { PlayerColor } from '../managers/PlayerManager.js';
 
 export class Berserker extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
-    private playerManager: PlayerManager;
     private pieceManager: PieceManager;
     private forcedSelectionManager: ForcedSelectionManager;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string, playerColor: PlayerColor) {
         super(ctx, hexSize, position, playerId);
         
-        // Get the managers
-        this.playerManager = PlayerManager.getInstance();
         this.pieceManager = PieceManager.getInstance();
         this.forcedSelectionManager = ForcedSelectionManager.getInstance();
         
@@ -27,8 +24,6 @@ export class Berserker extends Piece {
         this.image = new Image();
         this.image.src = 'assets/berserker.png';
         this.image.onload = () => {
-            // Get the player's color and recolor the image
-            const playerColor = this.playerManager.getPlayerColor(playerId);
             this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
                 playerColor

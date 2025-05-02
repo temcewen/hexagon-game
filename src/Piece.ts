@@ -1,5 +1,5 @@
-import { GridHexagon, HexPosition } from './Types.js';
-import { InteractionManager } from './InteractionManager.js';
+import { GridHexagon, HexPosition, ZoneType } from './Types.js';
+import type { InteractionManager } from './InteractionManager.js';
 import { HexUtils } from './utils/HexUtils.js';
 import { HexGridManager } from './managers/HexGridManager.js';
 
@@ -33,6 +33,14 @@ export abstract class Piece {
     public originalZIndex?: number;
     protected hexSize: number;
     protected ctx: CanvasRenderingContext2D;
+
+    // Add declaration for getZoneAt method
+    public getZoneAt!: (coord: HexCoord) => ZoneType;
+
+    // Implement getZone using getZoneAt
+    public getZone(): ZoneType {
+        return this.getZoneAt({ q: this.q, r: this.r, s: this.s });
+    }
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
         this.ctx = ctx;
@@ -168,6 +176,17 @@ export abstract class Piece {
         return true; // Default behavior: pieces are movable
     }
 
+    // Helper methods to check piece types at current position
+    private isOnResource(): boolean {
+        const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
+        return piecesAtPosition.some(p => p.constructor.name === "Resource");
+    }
+
+    private isOnBeacon(): boolean {
+        const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
+        return piecesAtPosition.some(p => p.constructor.name === "Beacon");
+    }
+
     protected getPossibleMovesByDirection(
         availableDistance: number, 
         allowEnemyBeacons: boolean = false,
@@ -185,6 +204,12 @@ export abstract class Piece {
             const [q, r, s] = key.split(',').map(Number);
             return { q, r, s };
         };
+
+        // Check if piece is currently on a Resource
+        const isOnResource = this.isOnResource();
+        
+        // Get current zone
+        const currentZone = this.getZone();
 
         // Add current position as a valid move
         validMovesSet.add(coordToKey({ q: this.q, r: this.r, s: this.s }));
@@ -213,6 +238,20 @@ export abstract class Piece {
                     break; // Stop exploring this direction if we hit a blocking piece
                 }
 
+                // Get the zone of the potential move
+                const moveZone = this.getZoneAt(move);
+
+                // Check zone-based restrictions
+                // 1. Can't move into friendly zone unless on a Resource
+                if (moveZone === ZoneType.Friendly && !isOnResource) {
+                    break;
+                }
+
+                // 2. If in enemy/friendly zone, must move to a different zone
+                if (currentZone !== ZoneType.Neutral && moveZone === currentZone) {
+                    continue;
+                }
+
                 // Add valid move to set
                 validMovesSet.add(coordToKey(move));
             }
@@ -223,24 +262,50 @@ export abstract class Piece {
         // Process valid moves and beacon paths
         for (const moveKey of validMovesSet) {
             const move = keyToCoord(moveKey);
+            
+            // Get the zone of the potential move
+            const moveZone = this.getZoneAt(move);
+
+            // Apply zone restrictions for the final moves
+            // 1. Can't move into friendly zone unless on a Resource
+            if (moveZone === ZoneType.Friendly && !isOnResource) {
+                continue;
+            }
+
+            // 2. If in enemy/friendly zone, must move to a different zone
+            if (currentZone !== ZoneType.Neutral && moveZone === currentZone) {
+                continue;
+            }
+
             finalValidMoves.add(moveKey);
 
             // Get pieces at the position to check for beacons
             const piecesAtPosition = this.getPiecesAtPosition(move.q, move.r, move.s);
             
-            // Find a beacon by checking if the constructor name is "Beacon" instead of using instanceof
-            const beaconAtPosition = piecesAtPosition.find(p => 
-                p.constructor.name === "Beacon"
-            );
+            // Find a beacon using the helper method
+            const hasBeacon = piecesAtPosition.some(p => p.constructor.name === "Beacon");
             
             // Only process beacon paths if we found a beacon
-            if (beaconAtPosition) {
+            if (hasBeacon) {
                 // Process beacon paths if a beacon exists at this position
                 const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
                 
                 // Add each unblocked beacon path coordinate
                 beaconPaths.forEach((pathBeacon) => {
                     const pathKey = coordToKey(pathBeacon);
+                    
+                    // Get the zone of the beacon path destination
+                    const beaconPathZone = this.getZoneAt(pathBeacon);
+
+                    // Apply zone restrictions for beacon paths
+                    if (beaconPathZone === ZoneType.Friendly && !isOnResource) {
+                        return;
+                    }
+
+                    if (currentZone !== ZoneType.Neutral && beaconPathZone === currentZone) {
+                        return;
+                    }
+
                     if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
                         finalValidMoves.add(pathKey);
                     }
@@ -269,6 +334,12 @@ export abstract class Piece {
             const [q, r, s] = key.split(',').map(Number);
             return { q, r, s };
         };
+
+        // Check if piece is currently on a Resource
+        const isOnResource = this.isOnResource();
+        
+        // Get current zone
+        const currentZone = this.getZone();
 
         // Get valid board coordinates from InteractionManager
         const validBoardHexes = Piece.interactionManager.getAllGridHexagons();
@@ -311,6 +382,20 @@ export abstract class Piece {
                 // Check if position is blocked
                 if (Piece.interactionManager.isPositionBlocked(this, nextMove, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) continue;
 
+                // Get the zone of the potential move
+                const moveZone = this.getZoneAt(nextMove);
+
+                // Check zone-based restrictions
+                // 1. Can't move into friendly zone unless on a Resource
+                if (moveZone === ZoneType.Friendly && !isOnResource) {
+                    continue;
+                }
+
+                // 2. If in enemy/friendly zone, must move to a different zone
+                if (currentZone !== ZoneType.Neutral && moveZone === currentZone) {
+                    continue;
+                }
+
                 // Add valid move to set
                 validMovesSet.add(moveKey);
 
@@ -324,24 +409,50 @@ export abstract class Piece {
         // Process valid moves and beacon paths
         for (const moveKey of validMovesSet) {
             const move = keyToCoord(moveKey);
+            
+            // Get the zone of the potential move
+            const moveZone = this.getZoneAt(move);
+
+            // Apply zone restrictions for the final moves
+            // 1. Can't move into friendly zone unless on a Resource
+            if (moveZone === ZoneType.Friendly && !isOnResource) {
+                continue;
+            }
+
+            // 2. If in enemy/friendly zone, must move to a different zone
+            if (currentZone !== ZoneType.Neutral && moveZone === currentZone) {
+                continue;
+            }
+
             finalValidMoves.add(moveKey);
 
             // Get pieces at the position to check for beacons
             const piecesAtPosition = this.getPiecesAtPosition(move.q, move.r, move.s);
             
-            // Find a beacon by checking if the constructor name is "Beacon" instead of using instanceof
-            const beaconAtPosition = piecesAtPosition.find(p => 
-                p.constructor.name === "Beacon"
-            );
+            // Find a beacon using the helper method
+            const hasBeacon = piecesAtPosition.some(p => p.constructor.name === "Beacon");
             
             // Only process beacon paths if we found a beacon
-            if (beaconAtPosition) {
+            if (hasBeacon) {
                 // Process beacon paths if a beacon exists at this position
                 const beaconPaths = Piece.interactionManager.getBeaconPathsFromPosition(move);
                 
                 // Add each unblocked beacon path coordinate
                 beaconPaths.forEach((pathBeacon) => {
                     const pathKey = coordToKey(pathBeacon);
+                    
+                    // Get the zone of the beacon path destination
+                    const beaconPathZone = this.getZoneAt(pathBeacon);
+
+                    // Apply zone restrictions for beacon paths
+                    if (beaconPathZone === ZoneType.Friendly && !isOnResource) {
+                        return;
+                    }
+
+                    if (currentZone !== ZoneType.Neutral && beaconPathZone === currentZone) {
+                        return;
+                    }
+
                     if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
                         finalValidMoves.add(pathKey);
                     }

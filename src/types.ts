@@ -14,6 +14,7 @@ export interface BaseHexagon {
 
 export interface GridHexagon extends BaseHexagon {
     // Grid-specific properties can be added here
+    color?: string; // Optional color property for the hexagon
 }
 
 export interface TileHexagon extends GridHexagon {
@@ -35,4 +36,10 @@ declare global {
 // Type guard to check if a hexagon is a TileHexagon
 export function isTileHexagon(hex: GridHexagon | TileHexagon): hex is TileHexagon {
     return 'zIndex' in hex;
+}
+
+export enum ZoneType {
+    Friendly = 'FRIENDLY',
+    Enemy = 'ENEMY',
+    Neutral = 'NEUTRAL'
 } 

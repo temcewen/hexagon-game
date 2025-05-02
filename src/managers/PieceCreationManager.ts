@@ -2,7 +2,7 @@ import { Piece } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
 import { HexGridManager } from './HexGridManager.js';
 import { PieceManager } from './PieceManager.js';
-import { PlayerManager } from './PlayerManager.js';
+import { PlayerManager, PlayerColor } from './PlayerManager.js';
 import { PlayerSelectionDialog } from '../ui/PlayerSelectionDialog.js';
 import { InteractionManager } from '../InteractionManager.js';
 
@@ -15,6 +15,7 @@ export class PieceCreationManager {
     private newPieceX: number = 0;
     private newPieceY: number = 0;
     private previewPiece: Piece | null = null;
+    private previewPlayerColor: PlayerColor | null = null;
     private readonly TEMP_PLAYER_ID = "preview";
     
     private hexGridManager: HexGridManager;
@@ -48,14 +49,16 @@ export class PieceCreationManager {
     }
     
     public startDraggingNewPiece(
-        pieceType: new (ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) => Piece,
+        pieceType: new (ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string, playerColor: PlayerColor) => Piece,
         mousePos: { x: number, y: number },
-        menuHexSize: number
+        menuHexSize: number,
+        playerColor: PlayerColor
     ): void {
         this.isDraggingNewPiece = true;
         this.newPieceType = pieceType;
         this.newPieceX = mousePos.x;
         this.newPieceY = mousePos.y;
+        this.previewPlayerColor = playerColor;
         
         // Create a temporary preview piece
         const tempPosition: GridHexagon = {
@@ -70,7 +73,7 @@ export class PieceCreationManager {
             // Use player1's ID for preview coloring
             const previewPlayerId = this.playerManager.getPlayer1Id();
             // Create preview piece with a size more appropriate for the game board
-            this.previewPiece = new pieceType(this.ctx!, this.hexSize, tempPosition, previewPlayerId);
+            this.previewPiece = new pieceType(this.ctx!, this.hexSize, tempPosition, previewPlayerId, playerColor);
             console.log(`Created dragging preview for ${pieceType.name}`);
             
             // Special handling for Mystic
@@ -123,7 +126,7 @@ export class PieceCreationManager {
     public async handleMouseUp(mousePos: { x: number, y: number }): Promise<boolean> {
         console.log("PieceCreationManager.handleMouseUp called", mousePos);
         
-        if (!this.isDraggingNewPiece || !this.previewPiece) {
+        if (!this.isDraggingNewPiece || !this.previewPiece || !this.previewPlayerColor) {
             console.log("Not dragging or no preview piece");
             return false;
         }
@@ -198,7 +201,8 @@ export class PieceCreationManager {
                 this.ctx!,
                 this.hexSize,
                 gridHex,
-                playerId
+                playerId,
+                this.previewPlayerColor
             );
             
             // Add to piece manager using interaction manager (which handles both)
@@ -227,6 +231,7 @@ export class PieceCreationManager {
         this.isDraggingNewPiece = false;
         this.newPieceType = null;
         this.previewPiece = null;
+        this.previewPlayerColor = null;
         // Clear cached locations when canceling drag
         this.validDropLocations = [];
     }

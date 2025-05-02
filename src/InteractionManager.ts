@@ -1,4 +1,4 @@
-import { GridHexagon } from './Types.js';
+import { GridHexagon, ZoneType } from './Types.js';
 import { Piece, HexCoord } from './Piece.js';
 import { HexGridManager } from './managers/HexGridManager.js';
 import { TooltipManager } from './managers/TooltipManager.js';
@@ -83,9 +83,27 @@ export class InteractionManager {
     }
 
     public setGridHexagons(hexagons: GridHexagon[]): void {
+        // Set the hexagons in the grid manager first
         HexGridManager.getInstance().setGridHexagons(hexagons);
-        // Initialize game state when grid is set
+
+        // Initialize game state
         PlayerManager.getInstance().initializeGameState();
+        
+        // Now color the hexagons based on zones
+        const playerManager = PlayerManager.getInstance();
+        hexagons.forEach(hexagon => {
+            const zoneType = playerManager.getZoneFor({ q: hexagon.q, r: hexagon.r, s: hexagon.s });
+            switch (zoneType) {
+                case ZoneType.Friendly:
+                    hexagon.color = 'rgba(60, 60, 60, 1)'; // Grey
+                    break;
+                case ZoneType.Enemy:
+                    hexagon.color = 'rgba(60, 60, 60, 1)'; // Grey
+                    break;
+                case ZoneType.Neutral:
+                    hexagon.color = hexagon.color || 'black';
+            }
+        });
     }
 
     public getAllGridHexagons(): GridHexagon[] {

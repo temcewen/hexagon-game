@@ -10,6 +10,7 @@ class BlackGrid {
     private verticalSpacing: number;
     private hexagons: GridHexagon[];
     private showCoordinates: boolean = false;
+    private readonly DEFAULT_COLOR: string = 'black';
 
     constructor(canvas: HTMLCanvasElement, hexSize: number) {
         this.canvas = canvas;
@@ -26,7 +27,7 @@ class BlackGrid {
         this.hexagons = [];
     }
 
-    private drawHexagon(x: number, y: number, q: number, r: number): void {
+    private drawHexagon(x: number, y: number, q: number, r: number, color?: string): void {
         this.ctx.beginPath();
         for (let i = 0; i < 6; i++) {
             const angle = 2 * Math.PI / 6 * i;
@@ -39,7 +40,7 @@ class BlackGrid {
             }
         }
         this.ctx.closePath();
-        this.ctx.fillStyle = 'black';
+        this.ctx.fillStyle = color || this.DEFAULT_COLOR;
         this.ctx.fill();
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2;
@@ -59,7 +60,7 @@ class BlackGrid {
                     const x = centerX + this.verticalSpacing * q;
                     const y = centerY + this.horizontalSpacing * (-r - q/2);
                     
-                    this.hexagons.push({ x, y, q, r, s });
+                    this.hexagons.push({ x, y, q, r, s, color: this.DEFAULT_COLOR });
                 }
             }
         }
@@ -85,7 +86,7 @@ class BlackGrid {
 
     public draw(): void {
         this.hexagons.forEach(hexagon => {
-            this.drawHexagon(hexagon.x, hexagon.y, hexagon.q, hexagon.r);
+            this.drawHexagon(hexagon.x, hexagon.y, hexagon.q, hexagon.r, hexagon.color);
         });
     }
 

@@ -1,27 +1,21 @@
 import { Piece } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
 import { HexCoord } from '../Piece.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { Resource } from './Resource.js';
+import { PlayerColor } from '../managers/PlayerManager.js';
 
 export class Commander extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
-    private playerManager: PlayerManager;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string, playerColor: PlayerColor) {
         super(ctx, hexSize, position, playerId);
-        
-        // Get the PlayerManager instance
-        this.playerManager = PlayerManager.getInstance();
         
         // Load the commander image
         this.image = new Image();
         this.image.src = 'assets/commander-icon.png';
         this.image.onload = () => {
-            // Get the player's color and recolor the image
-            const playerColor = this.playerManager.getPlayerColor(playerId);
             this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
                 playerColor,

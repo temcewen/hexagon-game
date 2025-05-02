@@ -8,7 +8,8 @@ import { Berserker } from '../pieces/Berserker.js';
 import { Mystic } from '../pieces/Mystic.js';
 import { GridHexagon } from '../Types.js';
 import { PieceCreationManager } from '../managers/PieceCreationManager.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
+import { PlayerManager, PlayerColor } from '../managers/PlayerManager.js';
+import { PieceManager } from '../managers/PieceManager.js';
 
 export class PieceCreationMenu {
     private static instance: PieceCreationMenu | null = null;
@@ -18,7 +19,7 @@ export class PieceCreationMenu {
     private hexSize: number = 30;
     private pieceSpacing: number = 80;
     private menuItems: Array<{
-        pieceType: new (ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) => Piece;
+        pieceType: new (ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string, playerColor: PlayerColor) => Piece;
         name: string;
         preview: Piece | null;
     }> = [];
@@ -30,6 +31,7 @@ export class PieceCreationMenu {
     private playerManager: PlayerManager;
     private lastDrawWidth: number = 0;
     private lastDrawHeight: number = 0;
+    private snapshotButtonY: number = 0;
 
     private constructor() {
         // Initialize managers - delay this until the initialize method
@@ -69,6 +71,7 @@ export class PieceCreationMenu {
         // Get client player ID for preview rendering
         // This ensures consistent colors with the actual game
         const previewPlayerId = this.playerManager.getPlayer1Id();
+        const previewPlayerColor = this.playerManager.getPlayerColor(previewPlayerId);
         
         this.menuItems.forEach((item, index) => {
             // Create a position for the preview piece
@@ -82,7 +85,7 @@ export class PieceCreationMenu {
             
             // Create the preview piece with appropriate size
             try {
-                item.preview = new item.pieceType(this.ctx, this.hexSize, position, previewPlayerId);
+                item.preview = new item.pieceType(this.ctx, this.hexSize, position, previewPlayerId, previewPlayerColor);
                 console.log(`Created preview for ${item.name}`);
                 
                 // Special case for pieces that need image loading
@@ -206,6 +209,22 @@ export class PieceCreationMenu {
                 this.ctx.fillText(item.name, x, y + this.hexSize + 20);
             }
         });
+
+        // Draw snapshot button at the bottom of the menu
+        const buttonHeight = 40;
+        const buttonWidth = 120;
+        const buttonX = canvasWidth - this.menuWidth / 2 - buttonWidth / 2;
+        this.snapshotButtonY = canvasHeight - buttonHeight - 20; // 20px padding from bottom
+
+        // Draw button background
+        this.ctx.fillStyle = '#444';
+        this.ctx.fillRect(buttonX, this.snapshotButtonY, buttonWidth, buttonHeight);
+
+        // Draw button text
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = '14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Snapshot', canvasWidth - this.menuWidth / 2, this.snapshotButtonY + buttonHeight / 2 + 5);
     }
 
     public handleMouseDown(mousePos: { x: number, y: number }): boolean {
@@ -214,6 +233,19 @@ export class PieceCreationMenu {
         // Check if the click is within the menu area
         if (mousePos.x < canvasWidth - this.menuWidth) {
             return false; // Not in menu area
+        }
+
+        // Check if clicking the snapshot button
+        const buttonHeight = 40;
+        const buttonWidth = 120;
+        const buttonX = canvasWidth - this.menuWidth / 2 - buttonWidth / 2;
+        
+        if (mousePos.x >= buttonX && 
+            mousePos.x <= buttonX + buttonWidth && 
+            mousePos.y >= this.snapshotButtonY && 
+            mousePos.y <= this.snapshotButtonY + buttonHeight) {
+            this.takeSnapshot();
+            return true;
         }
         
         // Check if clicking on a piece
@@ -235,11 +267,16 @@ export class PieceCreationMenu {
                 this.draggedPieceX = mousePos.x;
                 this.draggedPieceY = mousePos.y;
                 
+                // Get the current player's color
+                const currentPlayerId = this.playerManager.getClientPlayer();
+                const currentPlayerColor = this.playerManager.getPlayerColor(currentPlayerId);
+                
                 // Notify the piece creation manager
                 this.pieceCreationManager.startDraggingNewPiece(
                     this.draggedPieceType,
                     mousePos,
-                    this.hexSize
+                    this.hexSize,
+                    currentPlayerColor
                 );
                 
                 return true;
@@ -247,6 +284,30 @@ export class PieceCreationMenu {
         }
         
         return false;
+    }
+
+    private takeSnapshot(): void {
+        const pieceManager = PieceManager.getInstance();
+        const pieces = pieceManager.getPieces();
+        
+        // Create a map to store pieces by player ID
+        const piecesByPlayer: { [playerId: string]: Array<{ type: string, location: string }> } = {};
+        
+        // Group pieces by player ID
+        pieces.forEach(piece => {
+            if (!piecesByPlayer[piece.playerId]) {
+                piecesByPlayer[piece.playerId] = [];
+            }
+            
+            piecesByPlayer[piece.playerId].push({
+                type: piece.constructor.name,
+                location: `${piece.q}, ${piece.r}`
+            });
+        });
+        
+        // Print the snapshot to console
+        console.log('Piece Locations Snapshot:');
+        console.log(JSON.stringify(piecesByPlayer, null, 2));
     }
 
     public updateHexSize(hexSize: number): void {

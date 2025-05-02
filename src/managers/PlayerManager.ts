@@ -1,4 +1,5 @@
 import { PieceManager } from './PieceManager.js';
+import { HexCoord } from '../Piece.js';
 import { Resource } from '../pieces/Resource.js';
 import { Commander } from '../pieces/Commander.js';
 import { Transponder } from '../pieces/Transponder.js';
@@ -7,6 +8,8 @@ import { Engineer } from '../pieces/Engineer.js';
 import { Berserker } from '../pieces/Berserker.js';
 import { Mystic } from '../pieces/Mystic.js';
 import { HexGridManager } from './HexGridManager.js';
+import { Piece } from '../Piece.js';
+import { ZoneType } from '../Types.js';
 
 export type PlayerColor = 'lightblue' | 'lightgreen' | 'pink' | 'purple' | 'yellow' | 'darkorange';
 
@@ -20,6 +23,9 @@ export class PlayerManager {
     private playerColors: Map<string, PlayerColor> = new Map();
     private availableColors: PlayerColor[] = ['lightblue', 'lightgreen', 'pink', 'purple', 'yellow', 'darkorange'];
     
+    // Track zone coordinates per player
+    private playerZoneCoords: Map<string, Set<string>> = new Map();
+    
     // Singleton instance
     private static instance: PlayerManager | null = null;
 
@@ -31,6 +37,10 @@ export class PlayerManager {
         // Generate unique IDs for players
         this.player1Id = crypto.randomUUID();
         this.player2Id = crypto.randomUUID();
+        
+        // Initialize zone coordinates for each player
+        this.playerZoneCoords.set(this.player1Id, new Set());
+        this.playerZoneCoords.set(this.player2Id, new Set());
         
         // Assign random colors to players
         this.assignRandomColors();
@@ -71,6 +81,62 @@ export class PlayerManager {
         return HexGridManager.getInstance();
     }
 
+    /**
+     * Converts a HexCoord to a string representation for storage in Sets
+     */
+    private coordToString(coord: HexCoord): string {
+        return `${coord.q},${coord.r},${coord.s}`;
+    }
+
+    /**
+     * Adds coordinates to a player's zone
+     */
+    private addCoordsToZone(coords: HexCoord[], playerId: string): void {
+        const playerZones = this.playerZoneCoords.get(playerId);
+        if (!playerZones) {
+            throw new Error(`No zone set found for player ${playerId}`);
+        }
+
+        coords.forEach(coord => {
+            playerZones.add(this.coordToString(coord));
+        });
+    }
+
+    /**
+     * Extracts coordinates from piece positions array
+     */
+    private extractCoords(piecePositions: Array<{ type: any, position: HexCoord }>): HexCoord[] {
+        return piecePositions.map(piece => piece.position);
+    }
+
+    /**
+     * Determines the zone type for a given coordinate from a player's perspective
+     */
+    public getZoneFor(coord: HexCoord, playerId?: string): ZoneType {
+        const coordStr = this.coordToString(coord);
+        
+        // If no playerId is provided, use client player's perspective (for UI coloring)
+        const perspectivePlayerId = playerId || this.clientPlayerId;
+        if (!perspectivePlayerId) {
+            throw new Error('No player perspective available for zone determination');
+        }
+
+        // Check if the coordinate is in the perspective player's zone
+        const inPerspectivePlayerZone = this.playerZoneCoords.get(perspectivePlayerId)?.has(coordStr);
+        if (inPerspectivePlayerZone) {
+            return ZoneType.Friendly;
+        }
+
+        // Check if the coordinate is in any other player's zone
+        for (const [otherPlayerId, zoneCoords] of this.playerZoneCoords.entries()) {
+            if (otherPlayerId !== perspectivePlayerId && zoneCoords.has(coordStr)) {
+                return ZoneType.Enemy;
+            }
+        }
+        
+        return ZoneType.Neutral;
+    }
+
     public async initializeGameState(): Promise<void> {
         if (!this.ctx) {
             throw new Error('PlayerManager has not been initialized with a context. Call initialize() first.');
@@ -79,73 +145,18 @@ export class PlayerManager {
         if (this.initialized) {
             return;
         }
-        else {
-            this.initialized = true;
-        }
-        
-        const allHexagons = this.hexGridManager.getAllGridHexagons();
-        
-        // Player 1 pieces (top of board)
-        const player1Positions = {
-            resource: { q: -3, r: -4 },
-            commander: { q: -1, r: -4 },
-            transponder: { q: 1, r: -4 },
-            mage: { q: 3, r: -4 },
-            engineer: { q: -2, r: -3 },
-            berserker: { q: 0, r: -3 },
-            mystic: { q: 2, r: -3 }
-        };
-
-        // Player 2 pieces (bottom of board)
-        const player2Positions = {
-            resource: { q: -3, r: 4 },
-            commander: { q: -1, r: 4 },
-            transponder: { q: 1, r: 4 },
-            mage: { q: 3, r: 4 },
-            engineer: { q: -2, r: 3 },
-            berserker: { q: 0, r: 3 },
-            mystic: { q: 2, r: 3 }
-        };
-
-        // Create Player 1 pieces
-        const p1Resource = allHexagons.find(hex => hex.q === player1Positions.resource.q && hex.r === player1Positions.resource.r);
-        const p1Commander = allHexagons.find(hex => hex.q === player1Positions.commander.q && hex.r === player1Positions.commander.r);
-        const p1Transponder = allHexagons.find(hex => hex.q === player1Positions.transponder.q && hex.r === player1Positions.transponder.r);
-        const p1Mage = allHexagons.find(hex => hex.q === player1Positions.mage.q && hex.r === player1Positions.mage.r);
-        const p1Engineer = allHexagons.find(hex => hex.q === player1Positions.engineer.q && hex.r === player1Positions.engineer.r);
-        const p1Berserker = allHexagons.find(hex => hex.q === player1Positions.berserker.q && hex.r === player1Positions.berserker.r);
-        const p1Mystic = allHexagons.find(hex => hex.q === player1Positions.mystic.q && hex.r === player1Positions.mystic.r);
-
-        // Create Player 2 pieces
-        const p2Resource = allHexagons.find(hex => hex.q === player2Positions.resource.q && hex.r === player2Positions.resource.r);
-        const p2Commander = allHexagons.find(hex => hex.q === player2Positions.commander.q && hex.r === player2Positions.commander.r);
-        const p2Transponder = allHexagons.find(hex => hex.q === player2Positions.transponder.q && hex.r === player2Positions.transponder.r);
-        const p2Mage = allHexagons.find(hex => hex.q === player2Positions.mage.q && hex.r === player2Positions.mage.r);
-        const p2Engineer = allHexagons.find(hex => hex.q === player2Positions.engineer.q && hex.r === player2Positions.engineer.r);
-        const p2Berserker = allHexagons.find(hex => hex.q === player2Positions.berserker.q && hex.r === player2Positions.berserker.r);
-        const p2Mystic = allHexagons.find(hex => hex.q === player2Positions.mystic.q && hex.r === player2Positions.mystic.r);
-
-        // Add Player 1 pieces
-        if (p1Resource) this.pieceManager.addPiece(new Resource(this.ctx, this.hexSize, p1Resource, this.player1Id));
-        if (p1Commander) this.pieceManager.addPiece(new Commander(this.ctx, this.hexSize, p1Commander, this.player1Id));
-        if (p1Transponder) this.pieceManager.addPiece(new Transponder(this.ctx, this.hexSize, p1Transponder, this.player1Id));
-        if (p1Mage) this.pieceManager.addPiece(new Mage(this.ctx, this.hexSize, p1Mage, this.player1Id));
-        if (p1Engineer) this.pieceManager.addPiece(new Engineer(this.ctx, this.hexSize, p1Engineer, this.player1Id));
-        if (p1Berserker) this.pieceManager.addPiece(new Berserker(this.ctx, this.hexSize, p1Berserker, this.player1Id));
-        if (p1Mystic) this.pieceManager.addPiece(new Mystic(this.ctx, this.hexSize, p1Mystic, this.player1Id));
-
-        // Add Player 2 pieces
-        if (p2Resource) this.pieceManager.addPiece(new Resource(this.ctx, this.hexSize, p2Resource, this.player2Id));
-        if (p2Commander) this.pieceManager.addPiece(new Commander(this.ctx, this.hexSize, p2Commander, this.player2Id));
-        if (p2Transponder) this.pieceManager.addPiece(new Transponder(this.ctx, this.hexSize, p2Transponder, this.player2Id));
-        if (p2Mage) this.pieceManager.addPiece(new Mage(this.ctx, this.hexSize, p2Mage, this.player2Id));
-        if (p2Engineer) this.pieceManager.addPiece(new Engineer(this.ctx, this.hexSize, p2Engineer, this.player2Id));
-        if (p2Berserker) this.pieceManager.addPiece(new Berserker(this.ctx, this.hexSize, p2Berserker, this.player2Id));
-        if (p2Mystic) this.pieceManager.addPiece(new Mystic(this.ctx, this.hexSize, p2Mystic, this.player2Id));
 
         // Determine the client player ID (randomly selecting player1 for now)
         // In a real game, this would come from auth/session/connection data
         this.clientPlayerId = Math.random() > 0.5 ? this.player1Id : this.player2Id;
+        
+        this.initialized = true;
+        
+        // Create pieces for Player 1 at the top-right corner (6, 0)
+        this.addPiecesToBottomMiddle(this.player1Id);
+
+        // Create pieces for Player 2 at the bottom-middle corner (0, -6)
+        this.addPiecesToTopMiddle(this.player2Id);
     }
 
     public getPlayer1Id(): string {
@@ -186,5 +197,261 @@ export class PlayerManager {
             return "Player 2";
         }
         return "Unknown Player";
+    }
+
+    /**
+     * Creates a piece at the specified position
+     * @private
+     */
+    private createPieceAtPosition(
+        pieceType: typeof Resource | typeof Commander | typeof Transponder | typeof Mage | 
+                 typeof Engineer | typeof Berserker | typeof Mystic,
+        position: HexCoord,
+        playerId: string
+    ): Piece | null {
+        if (!this.ctx) {
+            throw new Error('PlayerManager has not been initialized with a context. Call initialize() first.');
+        }
+        
+        const hexGridManager = this.hexGridManager;
+        const gridHex = hexGridManager.getGridHexagonAtCoord(position.q, position.r, position.s);
+        
+        if (!gridHex) {
+            console.warn(`No grid hexagon found at position (${position.q}, ${position.r}, ${position.s})`);
+            return null;
+        }
+        
+        const hexSize = hexGridManager.getGridHexSize();
+        let piece: Piece | null = null;
+        
+        // Get the player's color
+        const playerColor = this.getPlayerColor(playerId);
+        
+        switch (pieceType.name) {
+            case Resource.name:
+                piece = new Resource(this.ctx, hexSize, gridHex, playerId);
+                break;
+            case Commander.name:
+                piece = new Commander(this.ctx, hexSize, gridHex, playerId, playerColor);
+                break;
+            case Transponder.name:
+                piece = new Transponder(this.ctx, hexSize, gridHex, playerId, playerColor);
+                break;
+            case Mage.name:
+                piece = new Mage(this.ctx, hexSize, gridHex, playerId, playerColor);
+                break;
+            case Engineer.name:
+                piece = new Engineer(this.ctx, hexSize, gridHex, playerId, playerColor);
+                break;
+            case Berserker.name:
+                piece = new Berserker(this.ctx, hexSize, gridHex, playerId, playerColor);
+                break;
+            case Mystic.name:
+                piece = new Mystic(this.ctx, hexSize, gridHex, playerId, playerColor);
+                break;
+        }
+        
+        if (piece) {
+            this.pieceManager.addPiece(piece);
+            
+            // Update getZoneAt to use the piece's playerId
+            piece.getZoneAt = (coord: HexCoord) => {
+                return this.getZoneFor(coord, piece.playerId);
+            };
+        }
+        
+        return piece;
+    }
+
+    /**
+     * Add pieces to the top-middle corner (0,6)
+     */
+    private addPiecesToTopMiddle(playerId: string): Piece[] {
+        console.log(`Adding pieces to top-middle corner for player ${playerId}`);
+        const pieces: Piece[] = [];
+        
+        // Hardcoded positions for top-middle corner (0,6)
+        const piecePositions = [
+            { type: Resource, position: { q: -1, r: 6, s: -5 } },
+            { type: Resource, position: { q: 0, r: 6, s: -6 } },
+            { type: Resource, position: { q: 1, r: 5, s: -6 } },
+            { type: Commander, position: { q: 0, r: 5, s: -5 } },
+            { type: Berserker, position: { q: 0, r: 4, s: -4 } },
+            { type: Transponder, position: { q: 2, r: 4, s: -6 } },
+            { type: Mage, position: { q: 1, r: 4, s: -5 } },
+            { type: Mystic, position: { q: -1, r: 5, s: -4 } },
+            { type: Engineer, position: { q: -2, r: 6, s: -4 } }
+        ];
+
+        // Add coordinates to appropriate zone
+        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        
+        for (const pieceInfo of piecePositions) {
+            const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
+            if (piece) pieces.push(piece);
+        }
+        
+        console.log(`Created ${pieces.length} pieces for top-middle corner`);
+        return pieces;
+    }
+    
+    /**
+     * Add pieces to the top-right corner (6,0)
+     */
+    private addPiecesToTopRight(playerId: string): Piece[] {
+        console.log(`Adding pieces to top-right corner for player ${playerId}`);
+        const pieces: Piece[] = [];
+        
+        // Hardcoded positions for top-right corner (6,0) based on the provided snapshot
+        const piecePositions = [
+            { type: Resource, position: { q: 6, r: -1, s: -5 } },
+            { type: Resource, position: { q: 6, r: 0, s: -6 } },
+            { type: Resource, position: { q: 5, r: 1, s: -6 } },
+            { type: Commander, position: { q: 5, r: 0, s: -5 } },
+            { type: Berserker, position: { q: 4, r: 0, s: -4 } },
+            { type: Transponder, position: { q: 6, r: -2, s: -4 } },
+            { type: Mage, position: { q: 5, r: -1, s: -4 } },
+            { type: Mystic, position: { q: 4, r: 1, s: -5 } },
+            { type: Engineer, position: { q: 4, r: 2, s: -6 } }
+        ];
+
+        // Add coordinates to appropriate zone
+        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        
+        for (const pieceInfo of piecePositions) {
+            const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
+            if (piece) pieces.push(piece);
+        }
+        
+        console.log(`Created ${pieces.length} pieces for top-right corner`);
+        return pieces;
+    }
+    
+    /**
+     * Add pieces to the bottom-right corner (6,-6)
+     */
+    private addPiecesToBottomRight(playerId: string): Piece[] {
+        console.log(`Adding pieces to bottom-right corner for player ${playerId}`);
+        const pieces: Piece[] = [];
+        
+        // Hardcoded positions for bottom-right corner (6,-6)
+        const piecePositions = [
+            { type: Resource, position: { q: 6, r: -5, s: -1 } },
+            { type: Resource, position: { q: 6, r: -6, s: 0 } },
+            { type: Resource, position: { q: 5, r: -6, s: 1 } },
+            { type: Commander, position: { q: 5, r: -5, s: 0 } },
+            { type: Berserker, position: { q: 4, r: -4, s: 0 } },
+            { type: Engineer, position: { q: 6, r: -4, s: -2 } },
+            { type: Mystic, position: { q: 5, r: -4, s: -1 } },
+            { type: Mage, position: { q: 4, r: -5, s: 1 } },
+            { type: Transponder, position: { q: 4, r: -6, s: 2 } }
+        ];
+
+        // Add coordinates to appropriate zone
+        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        
+        for (const pieceInfo of piecePositions) {
+            const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
+            if (piece) pieces.push(piece);
+        }
+        
+        console.log(`Created ${pieces.length} pieces for bottom-right corner`);
+        return pieces;
+    }
+    
+    /**
+     * Add pieces to the bottom-middle corner (0,-6)
+     */
+    private addPiecesToBottomMiddle(playerId: string): Piece[] {
+        console.log(`Adding pieces to bottom-middle corner for player ${playerId}`);
+        const pieces: Piece[] = [];
+        
+        // Hardcoded positions for bottom-middle corner (0,-6)
+        const piecePositions = [
+            { type: Resource, position: { q: -1, r: -5, s: 6 } },
+            { type: Resource, position: { q: 0, r: -6, s: 6 } },
+            { type: Resource, position: { q: 1, r: -6, s: 5 } },
+            { type: Commander, position: { q: 0, r: -5, s: 5 } },
+            { type: Berserker, position: { q: 0, r: -4, s: 4 } },
+            { type: Engineer, position: { q: 2, r: -6, s: 4 } },
+            { type: Mystic, position: { q: 1, r: -5, s: 4 } },
+            { type: Mage, position: { q: -1, r: -4, s: 5 } },
+            { type: Transponder, position: { q: -2, r: -4, s: 6 } }
+        ];
+
+        // Add coordinates to appropriate zone
+        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        
+        for (const pieceInfo of piecePositions) {
+            const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
+            if (piece) pieces.push(piece);
+        }
+        
+        console.log(`Created ${pieces.length} pieces for bottom-middle corner`);
+        return pieces;
+    }
+    
+    /**
+     * Add pieces to the bottom-left corner (-6,0)
+     */
+    private addPiecesToBottomLeft(playerId: string): Piece[] {
+        console.log(`Adding pieces to bottom-left corner for player ${playerId}`);
+        const pieces: Piece[] = [];
+        
+        // Hardcoded positions for bottom-left corner, mirroring top-right positions by piece type
+        const piecePositions = [
+            { type: Resource, position: { q: -6, r: 1, s: 5 } },      // Mirrors Resource at (6, -1, -5)
+            { type: Resource, position: { q: -6, r: 0, s: 6 } },      // Mirrors Resource at (6, 0, -6)
+            { type: Resource, position: { q: -5, r: -1, s: 6 } },     // Mirrors Resource at (5, 1, -6)
+            { type: Commander, position: { q: -5, r: 0, s: 5 } },     // Mirrors Commander at (5, 0, -5)
+            { type: Berserker, position: { q: -4, r: 0, s: 4 } },     // Mirrors Berserker at (4, 0, -4)
+            { type: Transponder, position: { q: -6, r: 2, s: 4 } },   // Mirrors Transponder at (6, -2, -4)
+            { type: Mage, position: { q: -5, r: 1, s: 4 } },          // Mirrors Mage at (5, -1, -4)
+            { type: Mystic, position: { q: -4, r: -1, s: 5 } },       // Mirrors Mystic at (4, 1, -5)
+            { type: Engineer, position: { q: -4, r: -2, s: 6 } }      // Mirrors Engineer at (4, 2, -6)
+        ];
+
+        // Add coordinates to appropriate zone
+        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        
+        for (const pieceInfo of piecePositions) {
+            const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
+            if (piece) pieces.push(piece);
+        }
+        
+        console.log(`Created ${pieces.length} pieces for bottom-left corner`);
+        return pieces;
+    }
+    
+    /**
+     * Add pieces to the top-left corner (-6,6)
+     */
+    private addPiecesToTopLeft(playerId: string): Piece[] {
+        console.log(`Adding pieces to top-left corner for player ${playerId}`);
+        const pieces: Piece[] = [];
+        
+        // Hardcoded positions for top-left corner, mirroring bottom-right positions by piece type
+        const piecePositions = [
+            { type: Resource, position: { q: -6, r: 5, s: 1 } },      // Mirrors Resource at (6, -5, -1)
+            { type: Resource, position: { q: -6, r: 6, s: 0 } },      // Mirrors Resource at (6, -6, 0)
+            { type: Resource, position: { q: -5, r: 6, s: -1 } },     // Mirrors Resource at (5, -6, 1)
+            { type: Commander, position: { q: -5, r: 5, s: 0 } },     // Mirrors Commander at (5, -5, 0)
+            { type: Berserker, position: { q: -4, r: 4, s: 0 } },     // Mirrors Berserker at (4, -4, 0)
+            { type: Engineer, position: { q: -6, r: 4, s: 2 } },      // Mirrors Engineer at (6, -4, -2)
+            { type: Mystic, position: { q: -5, r: 4, s: 1 } },        // Mirrors Mystic at (5, -4, -1)
+            { type: Mage, position: { q: -4, r: 5, s: -1 } },         // Mirrors Mage at (4, -5, 1)
+            { type: Transponder, position: { q: -4, r: 6, s: -2 } }   // Mirrors Transponder at (4, -6, 2)
+        ];
+
+        // Add coordinates to appropriate zone
+        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        
+        for (const pieceInfo of piecePositions) {
+            const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
+            if (piece) pieces.push(piece);
+        }
+        
+        console.log(`Created ${pieces.length} pieces for top-left corner`);
+        return pieces;
     }
 }

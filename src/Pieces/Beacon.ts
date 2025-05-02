@@ -1,7 +1,6 @@
 import { Piece, HexCoord } from '../Piece.js';
 import { GridHexagon } from '../Types.js';
 import { HexUtils } from '../utils/HexUtils.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
 import { ShadowPosition } from './ShadowPosition.js';
 
 export class Beacon extends Piece {
@@ -10,13 +9,9 @@ export class Beacon extends Piece {
     public is3D: boolean;
     private readonly SIZE_MULTIPLIER = 2.5;
     private imageLoaded: boolean = false;
-    private playerManager: PlayerManager;
 
     constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, rotationDegrees: number = 0, is3D: boolean = false, playerId: string) {
         super(ctx, hexSize, position, playerId);
-        
-        // Get the PlayerManager instance
-        this.playerManager = PlayerManager.getInstance();
         
         // Load the beacon image
         this.image = new Image();

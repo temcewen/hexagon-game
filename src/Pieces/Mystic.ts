@@ -4,29 +4,25 @@ import { PopupMenu } from '../PopupMenu.js';
 import { ShadowPosition } from './ShadowPosition.js';
 import { InteractionManager } from '../InteractionManager.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { Beacon } from './Beacon.js';
 import { Resource } from './Resource.js';
+import { PlayerColor } from '../managers/PlayerManager.js';
 
 export class Mystic extends Piece {
     private image: HTMLImageElement | HTMLCanvasElement;
     private imageLoaded: boolean = false;
     private popupMenu: PopupMenu;
-    private playerManager: PlayerManager;
+    private playerColor: PlayerColor;
 
-    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string) {
+    constructor(ctx: CanvasRenderingContext2D, hexSize: number, position: GridHexagon, playerId: string, playerColor: PlayerColor) {
         super(ctx, hexSize, position, playerId);
-        
-        // Get the PlayerManager instance
-        this.playerManager = PlayerManager.getInstance();
+        this.playerColor = playerColor;
         
         // Load the image
         this.image = new Image();
         this.image.src = 'assets/eye.png';
         this.image.onload = () => {
-            // Get the player's color and recolor the image
-            const playerColor = this.playerManager.getPlayerColor(playerId);
             this.image = ImageRecolorRenderer.recolorWithPlayerColor(
                 this.image as HTMLImageElement,
                 playerColor,
@@ -126,7 +122,8 @@ export class Mystic extends Piece {
                         this.ctx,
                         this.hexSize,
                         this.getCurrentPosition(),
-                        this.playerId
+                        this.playerId,
+                        this.playerColor
                     );
                     // Add the shadow position to the game board through the interaction manager
                     const interactionManager = (Piece as any).interactionManager as InteractionManager;
