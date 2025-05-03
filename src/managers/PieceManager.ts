@@ -1,5 +1,5 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { Beacon } from '../pieces/Beacon.js';
 import { Mage } from '../pieces/Mage.js';
 import { Resource } from '../pieces/Resource.js';
@@ -7,6 +7,7 @@ import { ShadowPosition } from '../pieces/ShadowPosition.js';
 import { Transponder } from '../pieces/Transponder.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { InteractionManager } from '../InteractionManager.js';
+import { ZoneManager } from './ZoneManager.js';
 
 export class PieceManager {
     private pieces: Map<string, Piece> = new Map();
@@ -94,7 +95,10 @@ export class PieceManager {
                         }
                     }
                 } 
-                else if (resourceAtFormerPosition) {
+                else if (
+                    resourceAtFormerPosition
+                    && ZoneManager.getInstance().getZoneFor(fromPosition, piece.playerId) != ZoneType.Friendly
+                ) {
                     // Default behavior for non-Mage pieces: Move the resource to the new position
                     resourceAtFormerPosition.moveToGridHex({
                         q: this.q,
@@ -130,7 +134,6 @@ export class PieceManager {
     public isPositionBlocked(
         piece: Piece, 
         position: HexCoord, 
-        allowEnemyBeacons: boolean = false,
         canMoveIntoEnemyPieces: boolean = false,
         canMoveIntoFriendlyPieces: boolean = false
     ): boolean {
@@ -146,7 +149,15 @@ export class PieceManager {
             
             // Handle enemy pieces
             if (p.playerId !== piece.playerId) {
-                return !canMoveIntoEnemyPieces;
+                // If we can't move into enemy pieces at all, block
+                if (!canMoveIntoEnemyPieces) return true;
+                
+                // Check if enemy piece is in its friendly zone
+                const enemyZone = p.getZone();
+                if (enemyZone === ZoneType.Friendly) {
+                    return true; // Block if enemy is in their friendly zone
+                }
+                return false; // Allow if enemy is not in their friendly zone
             }
             
             // Handle friendly pieces

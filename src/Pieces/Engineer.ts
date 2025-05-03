@@ -1,4 +1,4 @@
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { Piece, HexCoord, Point } from '../Piece.js';
 import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
@@ -36,7 +36,7 @@ export class Engineer extends Piece {
 
     public draw(isSelected: boolean): void {
 
-        if (this.isSharingTileWith(Resource)) {
+        if (this.isSharingTileWith(Resource) && this.getZone() != ZoneType.Friendly) {
             this.addResourceSpotlight();
         }
 

@@ -1,5 +1,5 @@
 import { Piece, Point, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { PopupMenu } from '../PopupMenu.js';
 import { ShadowPosition } from './ShadowPosition.js';
 import { InteractionManager } from '../InteractionManager.js';
@@ -47,7 +47,7 @@ export class Mystic extends Piece {
 
     public draw(isSelected: boolean): void {
 
-        if (this.isSharingTileWith(Resource)) {
+        if (this.isSharingTileWith(Resource) && this.getZone() != ZoneType.Friendly) {
             this.addResourceSpotlight();
         }
 

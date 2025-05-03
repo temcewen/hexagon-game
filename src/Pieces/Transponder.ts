@@ -1,7 +1,7 @@
 import { Piece, Point, HexCoord } from '../Piece.js';
 import { PopupMenu, PopupMenuItem } from '../PopupMenu.js';
 import { Beacon } from './Beacon.js';
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { InteractionManager } from '../InteractionManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { Resource } from './Resource.js';
@@ -161,7 +161,7 @@ export class Transponder extends Piece {
 
     public draw(isSelected: boolean): void {
 
-        if (this.isSharingTileWith(Resource)) {
+        if (this.isSharingTileWith(Resource) && this.getZone() != ZoneType.Friendly) {
             this.addResourceSpotlight();
         }
 

@@ -189,7 +189,6 @@ export abstract class Piece {
 
     protected getPossibleMovesByDirection(
         availableDistance: number, 
-        allowEnemyBeacons: boolean = false,
         canMoveIntoEnemyPieces: boolean = false,
         canMoveIntoFriendlyPieces: boolean = false
     ): HexCoord[] {
@@ -234,7 +233,7 @@ export abstract class Piece {
                 if (!isValidBoardPosition) break; // Stop exploring this direction if we're off the board
 
                 // Check if position is blocked
-                if (Piece.interactionManager.isPositionBlocked(this, move, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+                if (Piece.interactionManager.isPositionBlocked(this, move, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
                     break; // Stop exploring this direction if we hit a blocking piece
                 }
 
@@ -306,7 +305,7 @@ export abstract class Piece {
                         return;
                     }
 
-                    if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+                    if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
                         finalValidMoves.add(pathKey);
                     }
                 });
@@ -319,7 +318,6 @@ export abstract class Piece {
 
     protected getPossibleMovesAnyDirection(
         availableDistance: number, 
-        allowEnemyBeacons: boolean = false,
         canMoveIntoEnemyPieces: boolean = false,
         canMoveIntoFriendlyPieces: boolean = false
     ): HexCoord[] {
@@ -380,21 +378,7 @@ export abstract class Piece {
                 if (!isValidBoardPosition) continue;
 
                 // Check if position is blocked
-                if (Piece.interactionManager.isPositionBlocked(this, nextMove, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) continue;
-
-                // Get the zone of the potential move
-                const moveZone = this.getZoneAt(nextMove);
-
-                // Check zone-based restrictions
-                // 1. Can't move into friendly zone unless on a Resource
-                if (moveZone === ZoneType.Friendly && !isOnResource) {
-                    continue;
-                }
-
-                // 2. If in enemy/friendly zone, must move to a different zone
-                if (currentZone !== ZoneType.Neutral && moveZone === currentZone) {
-                    continue;
-                }
+                if (Piece.interactionManager.isPositionBlocked(this, nextMove, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) continue;
 
                 // Add valid move to set
                 validMovesSet.add(moveKey);
@@ -453,7 +437,7 @@ export abstract class Piece {
                         return;
                     }
 
-                    if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, allowEnemyBeacons, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+                    if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
                         finalValidMoves.add(pathKey);
                     }
                 });
@@ -470,13 +454,11 @@ export abstract class Piece {
     }
 
     // Method to force moving along a beacon path
-    public forceMoveAlongBeaconPath(beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
-        if (!Piece.interactionManager) {
-            console.warn('InteractionManager not set - cannot force move along beacon path');
+    public forceMoveAlongBeaconPath(beacon: any): Promise<HexCoord | null> {
+        if (!beacon) {
             return Promise.resolve(null);
         }
-        // Pass the call to InteractionManager to avoid circular dependency
-        return Piece.interactionManager.ForceMoveAlongBeaconPath(this, beacon, allowEnemyBeacons);
+        return Piece.interactionManager.ForceMoveAlongBeaconPath(this, beacon);
     }
 
     // Method to draw a golden hexagon border around the piece's tile
@@ -536,5 +518,36 @@ export abstract class Piece {
             piece instanceof pieceType // Check if piece is of the specified type
         );
         return all.length > 0 ? all[0] : null;
+    }
+
+    public isPositionBlocked(
+        move: HexCoord,
+        canMoveIntoEnemyPieces: boolean = false,
+        canMoveIntoFriendlyPieces: boolean = false
+    ): boolean {
+        return Piece.interactionManager.isPositionBlocked(this, move, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces);
+    }
+
+    protected isValidMove(
+        move: HexCoord,
+        canMoveIntoEnemyPieces: boolean = false,
+        canMoveIntoFriendlyPieces: boolean = false
+    ): boolean {
+        // Check if the move is blocked
+        if (Piece.interactionManager.isPositionBlocked(this, move, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+            return false;
+        }
+        return true;
+    }
+
+    protected isValidBeaconPath(
+        pathBeacon: HexCoord,
+        canMoveIntoEnemyPieces: boolean = false,
+        canMoveIntoFriendlyPieces: boolean = false
+    ): boolean {
+        if (!Piece.interactionManager.isPositionBlocked(this, pathBeacon, canMoveIntoEnemyPieces, canMoveIntoFriendlyPieces)) {
+            return true;
+        }
+        return false;
     }
 } 

@@ -1,5 +1,5 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { PieceManager } from '../managers/PieceManager.js';
 import { ShadowPosition } from './ShadowPosition.js';
@@ -79,7 +79,7 @@ export class Berserker extends Piece {
     }
 
     public draw(isSelected: boolean): void {
-        if (this.isSharingTileWith(Resource)) {
+        if (this.isSharingTileWith(Resource) && this.getZone() != ZoneType.Friendly) {
             this.addResourceSpotlight();
         }
 
@@ -100,7 +100,7 @@ export class Berserker extends Piece {
 
     public getValidMoves(): HexCoord[] {
         // Use getPossibleMovesAnyDirection with 2 moves
-        return this.getPossibleMovesAnyDirection(2, false, true, false);
+        return this.getPossibleMovesAnyDirection(2, true, false);
     }
 
     private setPosition(newPos: HexCoord): void {

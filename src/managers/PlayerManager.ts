@@ -10,6 +10,7 @@ import { Mystic } from '../pieces/Mystic.js';
 import { HexGridManager } from './HexGridManager.js';
 import { Piece } from '../Piece.js';
 import { ZoneType } from '../Types.js';
+import { ZoneManager } from './ZoneManager.js';
 
 export type PlayerColor = 'lightblue' | 'lightgreen' | 'pink' | 'purple' | 'yellow' | 'darkorange';
 
@@ -38,9 +39,10 @@ export class PlayerManager {
         this.player1Id = crypto.randomUUID();
         this.player2Id = crypto.randomUUID();
         
-        // Initialize zone coordinates for each player
-        this.playerZoneCoords.set(this.player1Id, new Set());
-        this.playerZoneCoords.set(this.player2Id, new Set());
+        // Initialize zone tracking for each player
+        const zoneManager = ZoneManager.getInstance();
+        zoneManager.initializePlayerZone(this.player1Id);
+        zoneManager.initializePlayerZone(this.player2Id);
         
         // Assign random colors to players
         this.assignRandomColors();
@@ -89,20 +91,6 @@ export class PlayerManager {
     }
 
     /**
-     * Adds coordinates to a player's zone
-     */
-    private addCoordsToZone(coords: HexCoord[], playerId: string): void {
-        const playerZones = this.playerZoneCoords.get(playerId);
-        if (!playerZones) {
-            throw new Error(`No zone set found for player ${playerId}`);
-        }
-
-        coords.forEach(coord => {
-            playerZones.add(this.coordToString(coord));
-        });
-    }
-
-    /**
      * Extracts coordinates from piece positions array
      */
     private extractCoords(piecePositions: Array<{ type: any, position: HexCoord }>): HexCoord[] {
@@ -113,28 +101,13 @@ export class PlayerManager {
      * Determines the zone type for a given coordinate from a player's perspective
      */
     public getZoneFor(coord: HexCoord, playerId?: string): ZoneType {
-        const coordStr = this.coordToString(coord);
-        
         // If no playerId is provided, use client player's perspective (for UI coloring)
         const perspectivePlayerId = playerId || this.clientPlayerId;
         if (!perspectivePlayerId) {
             throw new Error('No player perspective available for zone determination');
         }
 
-        // Check if the coordinate is in the perspective player's zone
-        const inPerspectivePlayerZone = this.playerZoneCoords.get(perspectivePlayerId)?.has(coordStr);
-        if (inPerspectivePlayerZone) {
-            return ZoneType.Friendly;
-        }
-
-        // Check if the coordinate is in any other player's zone
-        for (const [otherPlayerId, zoneCoords] of this.playerZoneCoords.entries()) {
-            if (otherPlayerId !== perspectivePlayerId && zoneCoords.has(coordStr)) {
-                return ZoneType.Enemy;
-            }
-        }
-        
-        return ZoneType.Neutral;
+        return ZoneManager.getInstance().getZoneFor(coord, perspectivePlayerId);
     }
 
     public async initializeGameState(): Promise<void> {
@@ -252,12 +225,14 @@ export class PlayerManager {
         }
         
         if (piece) {
-            this.pieceManager.addPiece(piece);
             
             // Update getZoneAt to use the piece's playerId
             piece.getZoneAt = (coord: HexCoord) => {
                 return this.getZoneFor(coord, piece.playerId);
             };
+
+            // Add the piece using the piece manager.
+            this.pieceManager.addPiece(piece);
         }
         
         return piece;
@@ -283,8 +258,8 @@ export class PlayerManager {
             { type: Engineer, position: { q: -2, r: 6, s: -4 } }
         ];
 
-        // Add coordinates to appropriate zone
-        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        // Add coordinates to appropriate zone using ZoneManager
+        ZoneManager.getInstance().addCoordsToZone(this.extractCoords(piecePositions), playerId);
         
         for (const pieceInfo of piecePositions) {
             const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
@@ -315,8 +290,8 @@ export class PlayerManager {
             { type: Engineer, position: { q: 4, r: 2, s: -6 } }
         ];
 
-        // Add coordinates to appropriate zone
-        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        // Add coordinates to appropriate zone using ZoneManager
+        ZoneManager.getInstance().addCoordsToZone(this.extractCoords(piecePositions), playerId);
         
         for (const pieceInfo of piecePositions) {
             const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
@@ -347,8 +322,8 @@ export class PlayerManager {
             { type: Transponder, position: { q: 4, r: -6, s: 2 } }
         ];
 
-        // Add coordinates to appropriate zone
-        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        // Add coordinates to appropriate zone using ZoneManager
+        ZoneManager.getInstance().addCoordsToZone(this.extractCoords(piecePositions), playerId);
         
         for (const pieceInfo of piecePositions) {
             const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
@@ -379,8 +354,8 @@ export class PlayerManager {
             { type: Transponder, position: { q: -2, r: -4, s: 6 } }
         ];
 
-        // Add coordinates to appropriate zone
-        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        // Add coordinates to appropriate zone using ZoneManager
+        ZoneManager.getInstance().addCoordsToZone(this.extractCoords(piecePositions), playerId);
         
         for (const pieceInfo of piecePositions) {
             const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
@@ -411,8 +386,8 @@ export class PlayerManager {
             { type: Engineer, position: { q: -4, r: -2, s: 6 } }      // Mirrors Engineer at (4, 2, -6)
         ];
 
-        // Add coordinates to appropriate zone
-        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        // Add coordinates to appropriate zone using ZoneManager
+        ZoneManager.getInstance().addCoordsToZone(this.extractCoords(piecePositions), playerId);
         
         for (const pieceInfo of piecePositions) {
             const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);
@@ -443,8 +418,8 @@ export class PlayerManager {
             { type: Transponder, position: { q: -4, r: 6, s: -2 } }   // Mirrors Transponder at (4, -6, 2)
         ];
 
-        // Add coordinates to appropriate zone
-        this.addCoordsToZone(this.extractCoords(piecePositions), playerId);
+        // Add coordinates to appropriate zone using ZoneManager
+        ZoneManager.getInstance().addCoordsToZone(this.extractCoords(piecePositions), playerId);
         
         for (const pieceInfo of piecePositions) {
             const piece = this.createPieceAtPosition(pieceInfo.type, pieceInfo.position, playerId);

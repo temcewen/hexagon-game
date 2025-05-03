@@ -36,7 +36,7 @@ declare global {
 // Type guard to check if a hexagon is a TileHexagon
 export function isTileHexagon(hex: GridHexagon | TileHexagon): hex is TileHexagon {
     return 'zIndex' in hex;
-}
+} 
 
 export enum ZoneType {
     Friendly = 'FRIENDLY',

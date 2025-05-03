@@ -1,5 +1,5 @@
 import { Piece, HexCoord } from '../Piece.js';
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { Beacon } from './Beacon.js';
 import { ForcedSelectionManager } from '../managers/ForcedSelectionManager.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
@@ -31,7 +31,7 @@ export class Mage extends Piece {
 
     public draw(isSelected: boolean): void {
 
-        if (this.isSharingTileWith(Resource)) {
+        if (this.isSharingTileWith(Resource) && this.getZone() != ZoneType.Friendly) {
             this.addResourceSpotlight();
         }
 
@@ -126,7 +126,7 @@ export class Mage extends Piece {
         }
         
         // Start forced selection mode
-        await piece.forceMoveAlongBeaconPath(beacon, true);
+        await piece.forceMoveAlongBeaconPath(beacon);
         await delay(200);
     }
 }

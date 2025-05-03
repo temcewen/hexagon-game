@@ -117,14 +117,12 @@ export class InteractionManager {
     public isPositionBlocked(
         piece: Piece, 
         position: HexCoord, 
-        allowEnemyBeacons: boolean,
         canMoveIntoEnemyPieces: boolean = false,
         canMoveIntoFriendlyPieces: boolean = false
     ): boolean {
         return PieceManager.getInstance().isPositionBlocked(
             piece, 
             position, 
-            allowEnemyBeacons,
             canMoveIntoEnemyPieces,
             canMoveIntoFriendlyPieces
         );
@@ -192,7 +190,7 @@ export class InteractionManager {
     }
     
     // Method to force piece to move along a beacon path
-    public async ForceMoveAlongBeaconPath(piece: Piece, beacon: any, allowEnemyBeacons: boolean = false): Promise<HexCoord | null> {
+    public async ForceMoveAlongBeaconPath(piece: Piece, beacon: any): Promise<HexCoord | null> {
         var connectedBeacons = beacon.FindBeaconsInPath();
         
         const beaconCoords = connectedBeacons.map((b: any) => ({

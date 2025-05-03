@@ -1,4 +1,4 @@
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { Piece } from '../Piece.js';
 import { PopupMenu } from '../PopupMenu.js';
 import { ShadowPosition } from './ShadowPosition.js';
@@ -22,14 +22,15 @@ export class Resource extends Piece {
         const piecesAtPosition = this.getPiecesAtPosition(this.q, this.r, this.s);
         
         // Check if there's any piece that's not a ShadowPosition or Beacon
-        const hasOtherPiece = piecesAtPosition.some(piece => 
+        const otherPieces = piecesAtPosition.filter(piece => 
             piece !== this && 
             !(piece instanceof ShadowPosition) && 
             !(piece instanceof Beacon)
         );
 
         // If there's another piece (not Shadow/Beacon), don't draw
-        if (hasOtherPiece) {
+        // But do draw if it's in a friendly zone.
+        if (otherPieces.length > 0 && otherPieces.some((p) => p.getZone() != ZoneType.Friendly)) {
             return;
         }
 

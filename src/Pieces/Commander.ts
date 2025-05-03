@@ -1,5 +1,5 @@
 import { Piece } from '../Piece.js';
-import { GridHexagon } from '../Types.js';
+import { GridHexagon, ZoneType } from '../Types.js';
 import { HexCoord } from '../Piece.js';
 import { ImageRecolorRenderer } from '../renderers/ImageRecolorRenderer.js';
 import { Resource } from './Resource.js';
@@ -26,7 +26,7 @@ export class Commander extends Piece {
     }
 
     public draw(isSelected: boolean): void {
-        if (this.isSharingTileWith(Resource)) {
+        if (this.isSharingTileWith(Resource) && this.getZone() != ZoneType.Friendly) {
             this.addResourceSpotlight();
         }
 
